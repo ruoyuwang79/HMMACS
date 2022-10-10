@@ -202,8 +202,13 @@ class DQN:
 		# Bellman equation
 		batch_idx = np.array([i for i in range(self.batch_size)], dtype=int)
 		sub_slot_idx = np.array([i for i in range(self.action_dim2)], dtype=int)
-		q.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))[batch_idx, sub_slot_idx, action, :] = (1 - self.alpha) * q.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))[batch_idx, sub_slot_idx, action, :] \
-																				+ self.alpha * (Rewards + self.gamma * q_targ.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))[batch_idx, sub_slot_idx, action_, :])
+		if self.sink_mode == 0:
+			q.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))[batch_idx, sub_slot_idx, action, :] = (1 - self.alpha) * q.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))[batch_idx, sub_slot_idx, action, :] \
+																				                                	+ self.alpha * (Rewards + self.gamma * q_targ.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))[batch_idx, sub_slot_idx, action_, :])
+		else:
+			for i in range(self.action_dim2):
+				q.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))[batch_idx, i, action[:, i], :] = (1 - self.alpha) * q.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))[batch_idx, i, action[:, i], :] \
+																												   + self.alpha * (Rewards + self.gamma * q_targ.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))[batch_idx, i, action_[:, i], :])
 
 		# internal NN training
 		self.model.fit(state, q, self.batch_size, epochs=1, verbose=0)

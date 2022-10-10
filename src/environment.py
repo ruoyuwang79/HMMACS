@@ -363,12 +363,13 @@ class ENVIRONMENT(object):
 	def finalize(self):
 		zero_padding_actions = np.zeros(self.n_nodes, dtype=int)
 		Success_trace = np.zeros((self.n_padding, self.n_nodes), dtype=int)
+		nodes_idx = np.array([i for i in range(self.n_nodes)], dtype=int)
 		for i in range(self.n_padding):
 			if self.sink_mode == 0:
 				_, Success_trace[i, :] = self.channel.step(zero_padding_actions, self.packet_length)
 			else:
-				zero_padding_actions[sub_slot_action_idx == self.previous_action] = 1
-				zero_padding_actions[sub_slot_action_idx != self.previous_action] = 0
+				zero_padding_actions[nodes_idx == self.previous_action] = 1
+				zero_padding_actions[nodes_idx != self.previous_action] = 0
 				_, self.previous_action, Success_trace[i, :] = self.channel.cycle(zero_padding_actions, 1023, self.packet_length)
 
 		if self.save_trace:
