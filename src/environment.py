@@ -343,12 +343,12 @@ class ENVIRONMENT(object):
 	#             obs: # sub * n_nodes
 	#             rewards: 1 * n_nodes
 	def cycle(self, broadcast):
-		Observation = np.zeros((self.num_sub_slot, self.n_nodes), dtype=int)
+		Observations = np.zeros((self.num_sub_slot, self.n_nodes), dtype=int)
 		Success_trace = np.zeros((self.num_sub_slot, self.n_nodes), dtype=int)
-		sub_slot_action_idx = np.array([i for i in range(self.num_sub_slot)], dtype=int)
+		nodes_idx = np.array([i for i in range(self.n_nodes)], dtype=int)
 		for i in range(self.num_sub_slot):
 			sub_slot_action = np.zeros(self.n_nodes, dtype=int)
-			sub_slot_action[sub_slot_action_idx == self.previous_action] = 1
+			sub_slot_action[nodes_idx == self.previous_action] = 1
 			Observations[i, :], self.previous_action, Success_trace[i, :] = self.channel.cycle(sub_slot_action, broadcast[i], self.packet_length)
 
 		if self.save_trace:

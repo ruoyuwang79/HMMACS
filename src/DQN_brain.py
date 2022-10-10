@@ -42,6 +42,7 @@ class DQN:
 		# controls
 		self.mac_mode = mac_mode
 		self.sink_mode = sink_mode
+		self.reward_polarity = reward_polarity
 		
 		# shapes
 		# number of actions in async mode is any possible sub time slot + idle
@@ -111,18 +112,19 @@ class DQN:
 		h8 = Dense(64, activation="relu", kernel_initializer=he_normal(seed=27567))(h7) #h6
 		add3 = Add()([h7, add2])
 
-		outputs =  Dense(self.n_actions * self.reward_dim2, kernel_initializer=he_normal(seed=27))(add3)
+		# the output is how many actions to take this time slot (sink will takes # sub slots actions) *
+		# number of actions (expectations of different action) * number of observable rewards (sink see all)
+		outputs =  Dense(self.action_dim2 * self.n_actions * self.reward_dim2, kernel_initializer=he_normal(seed=27))(add3)
 		model = Model(inputs=inputs, outputs=outputs)
 		model.compile(loss='mse', optimizer=RMSprop(learning_rate=self.learning_rate))
 		return model
 	
 	# use Q value to determine action
 	def get_action(self, action_values):
-		# TODO: global branch incorrect right now
-		# calculate the system throughput
-		action_values_list = action_values.reshape((-1, self.n_actions, self.reward_dim2)).sum(2)
+		# reshape the flatten output and get the sum up expectation of each action
+		action_values_list = action_values.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2)).sum(3)
 		# get the action that maximize the system throughput
-		return action_values_list.argmax(1)
+		return action_values_list.argmax(2)
 
 	# inference, batch size always 1
 	def choose_action(self, state):
@@ -131,12 +133,12 @@ class DQN:
 		
 		# epsilon greedy
 		if np.random.uniform(0, 1) < self.epsilon:
-			return np.random.randint(0, self.n_actions)
+			return np.random.randint(0, self.n_actions, self.action_dim2)
 
 		# construct as batch 1
 		state = state[np.newaxis, :]
-		action_values = self.model.predict(state, verbose=0)
-		return self.get_action(action_values[0])[0]
+		action_values = self.model.predict(state, verbose=0)[0]
+		return self.get_action(action_values)[0]
 
 	# startup state
 	def kickoff(self):
@@ -150,13 +152,13 @@ class DQN:
 	def get_rewards(self, obs):
 		if self.sink_mode == 0:
 			obs[obs == -1] = -1 * self.penalty_factor if self.reward_polarity else 0
+			return np.array([obs.sum()], dtype=int)
 		else:
-			obs
-		return obs.sum(0)
+			return (obs[np.abs(obs).sum(1) == 1] == -1).sum(0)
 
 	# update memory
 	def store_transition(self, s, a, R, s_):
-		transition = np.concatenate((s, [a], R, s_))
+		transition = np.concatenate((s, a, R, s_))
 		# the rightmost may not the newest
 		index = self.memory_couter % self.memory_size
 		self.memory[index, :] = transition
@@ -165,8 +167,8 @@ class DQN:
 	# use the (obs, a) pair to construct next state, update memory
 	def step(self, action, obs, state):
 		Rewards = self.get_rewards(obs)
-		next_state = np.concatenate((state[self.time_slot_state_size:], [action], obs, [Rewards]))
-		self.store_transition(state, action, [Rewards], next_state)
+		next_state = np.concatenate((state[self.time_slot_state_size:], action, obs.flatten(), Rewards))
+		self.store_transition(state, action, Rewards, next_state)
 		return next_state
 
 	# update target network
@@ -187,8 +189,8 @@ class DQN:
 		batch_memory = self.memory[sample_index, :]
 
 		state      = batch_memory[:, :self.state_size]
-		action     = batch_memory[:, self.state_size]
-		Rewards    = batch_memory[:, self.state_size + 1:self.state_size + 1 + self.reward_dim2]
+		action     = batch_memory[:, self.state_size:self.state_size + self.action_dim2]
+		Rewards    = batch_memory[:, self.state_size + self.action_dim2:self.state_size + self.action_dim2 + self.reward_dim2]
 		next_state = batch_memory[:, -self.state_size:]
 
 		# q(S_t, A)
@@ -199,8 +201,9 @@ class DQN:
 
 		# Bellman equation
 		batch_idx = np.array([i for i in range(self.batch_size)], dtype=int)
-		q.reshape((-1, self.n_actions, self.reward_dim2))[batch_idx, action, :] = (1 - self.alpha) * q.reshape((-1, self.n_actions, self.reward_dim2))[batch_idx, action, :] \
-																				+ self.alpha * (Rewards + self.gamma * q_targ.reshape((-1, self.n_actions, self.reward_dim2))[batch_idx, action_, :])
+		sub_slot_idx = np.array([i for i in range(self.action_dim2)], dtype=int)
+		q.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))[batch_idx, sub_slot_idx, action, :] = (1 - self.alpha) * q.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))[batch_idx, sub_slot_idx, action, :] \
+																				+ self.alpha * (Rewards + self.gamma * q_targ.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))[batch_idx, sub_slot_idx, action_, :])
 
 		# internal NN training
 		self.model.fit(state, q, self.batch_size, epochs=1, verbose=0)
