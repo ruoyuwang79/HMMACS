@@ -46,14 +46,14 @@ class DQN:
 		
 		# shapes
 		# number of actions in async mode is any possible sub time slot + idle
-		self.n_actions = (self.num_sub_slot - self.guard_length if self.mac_mode == 0 else 1) + 1
+		self.n_actions = (1 if self.mac_mode == 0 else self.num_sub_slot - self.guard_length) + 1
 		self.n_actions = self.n_actions if self.sink_mode == 0 else self.n_nodes + 1
 		# action shape: action_dim1 (batch size) * action_dim2
 		self.action_dim2 = 1 if self.sink_mode == 0 else self.num_sub_slot
 		# observation shape: observation cannot reduce, therefore, it contains sub slot factor
 		self.obs_dim2 = self.num_sub_slot if self.sink_mode == 0 else self.n_nodes * self.num_sub_slot
 		# reward shape: reward_dim1 (batch size) * reward_dim2
-		self.reward_dim2 = 1 if self.sink_mode == 0 else self.n_nodes
+		self.reward_dim2 = 1 if self.sink_mode == 0 else self.n_nodes * self.num_sub_slot
 		# time slot state: s = (a, obs, R), obs in sub time slot
 		self.time_slot_state_size = self.action_dim2 + self.obs_dim2 + self.reward_dim2
 		# state: S = state_len * s
@@ -154,7 +154,9 @@ class DQN:
 			obs[obs == -1] = -1 * self.penalty_factor if self.reward_polarity else 0
 			return np.array([obs.sum()], dtype=int)
 		else:
-			return (obs[np.abs(obs).sum(1) == 1] == -1).sum(0)
+			Rewards = np.zeros(self.reward_dim2, dtype=int)
+			Rewards[obs[np.abs(obs).sum(1) == 1] == -1] = 1
+			return Rewards.flatten()
 
 	# update memory
 	def store_transition(self, s, a, R, s_):
@@ -194,24 +196,23 @@ class DQN:
 		next_state = batch_memory[:, -self.state_size:]
 
 		# q(S_t, A)
-		q = self.model.predict(state, verbose=0)
+		q = self.model.predict(state, verbose=0).reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))
 		# q(S'_t, A)
-		q_targ = self.target_model.predict(next_state, verbose=0)
+		q_targ = self.target_model.predict(next_state, verbose=0).reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))
 		action_ = self.get_action(q_targ)
 
 		# Bellman equation
 		batch_idx = np.array([i for i in range(self.batch_size)], dtype=int)
 		sub_slot_idx = np.array([i for i in range(self.action_dim2)], dtype=int)
 		if self.sink_mode == 0:
-			q.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))[batch_idx, sub_slot_idx, action, :] = (1 - self.alpha) * q.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))[batch_idx, sub_slot_idx, action, :] \
-																				                                	+ self.alpha * (Rewards + self.gamma * q_targ.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))[batch_idx, sub_slot_idx, action_, :])
+			q[batch_idx, sub_slot_idx, action, :] = (1 - self.alpha) * q[batch_idx, sub_slot_idx, action, :] + self.alpha * (Rewards + self.gamma * q_targ[batch_idx, sub_slot_idx, action_, :])
 		else:
+			Rewards = Rewards.reshape((-1, self.action_dim2, self.n_nodes))
 			for i in range(self.action_dim2):
-				q.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))[batch_idx, i, action[:, i], :] = (1 - self.alpha) * q.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))[batch_idx, i, action[:, i], :] \
-																												   + self.alpha * (Rewards + self.gamma * q_targ.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))[batch_idx, i, action_[:, i], :])
+				q[batch_idx, i, action[:, i], :] = (1 - self.alpha) * q[batch_idx, i, action[:, i], :] + self.alpha * (Rewards[:, i, :] + self.gamma * q_targ[batch_idx, i, action_[:, i], :])
 
 		# internal NN training
-		self.model.fit(state, q, self.batch_size, epochs=1, verbose=0)
+		self.model.fit(state, q.reshape(-1, self.action_dim2 * self.n_actions * self.reward_dim2), self.batch_size, epochs=1, verbose=0)
 
 	# store configs
 	def finalize(self):
