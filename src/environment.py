@@ -233,12 +233,10 @@ class ENVIRONMENT(object):
 
 		# Ruoyu: simulation modes selection
 		# env_mode 0: RF, env_mode others: UAN
-		# mac_mode 0: sync, mac_mode others: async
-		# sink_mode 0: normal, sink_mode other: agent_sink
-		# Note: if set env_mode != 0, must give delay (spatial distribution) and num_sub_slot
-		# Note: max(node_actions) <= num_sub_slot
 		self.env_mode = env_mode
+		# mac_mode 0: sync, mac_mode others: async
 		self.mac_mode = mac_mode
+		# sink_mode 0: src-agent, sink_mode other: sink-agent
 		self.sink_mode = sink_mode
 		# delay is the propagation delay measured by number of sub time slots 
 		self.nodes_delay = np.ones(self.n_nodes, dtype=int) if self.env_mode == 0 else nodes_delay
@@ -299,6 +297,8 @@ class ENVIRONMENT(object):
 		self.window[self.window < 0] = np.random.randint(0, self.window_size * 2**self.eb_collision_count)[self.window < 0]
 
 	# post process observations
+	# if the observation has more complex architecture
+	# add the decoding part here
 	def decode_obs(self, Observations):
 		# treat no data as idle
 		Observations[Observations == -1] = 1
@@ -306,9 +306,9 @@ class ENVIRONMENT(object):
 		Observations -= 1
 		return Observations
 
-	# Ruoyu: brand new version
+	# src-agent ENV API
 	# there is no more than 1 agents, the action is an integer
-	# this function is compatible the API of cycle
+	# this function is compatible to non-agent simulation
 	def step(self, action=0):
 		# get the action of this time slot
 		self.get_actions()
@@ -336,7 +336,7 @@ class ENVIRONMENT(object):
 		
 		return Observations[:, self.nodes_mask == 0].flatten()
 
-	# used for sink agent case
+	# sink-agent ENV API
 	# main part in the CHANNEL (sink)
 	# ENVIRONMENT just provides APIs for agent
 	# dimensions: action: # sub * 1

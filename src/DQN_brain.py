@@ -10,7 +10,7 @@ from tensorflow.keras.initializers import he_normal
 from tensorflow.keras.activations import softmax
 
 class DQN:
-	def __init__(self, 
+	def __init__(self,
 				 state_len,
 				 n_nodes,
 				 num_sub_slot,
@@ -40,7 +40,9 @@ class DQN:
 		# guard time length (in # of sub time slot)
 		self.guard_length = guard_length
 		# controls
+		# mac_mode 0: sync, mac_mode others: async
 		self.mac_mode = mac_mode
+		# sink_mode 0: src-agent, sink_mode other: sink-agent
 		self.sink_mode = sink_mode
 		self.reward_polarity = reward_polarity
 		
@@ -112,8 +114,6 @@ class DQN:
 		h8 = Dense(64, activation="relu", kernel_initializer=he_normal(seed=27567))(h7) #h6
 		add3 = Add()([h7, add2])
 
-		# the output is how many actions to take this time slot (sink will takes # sub slots actions) *
-		# number of actions (expectations of different action) * number of observable rewards (sink see all)
 		outputs =  Dense(self.action_dim2 * self.n_actions * self.reward_dim2, kernel_initializer=he_normal(seed=27))(add3)
 		model = Model(inputs=inputs, outputs=outputs)
 		model.compile(loss='mse', optimizer=RMSprop(learning_rate=self.learning_rate))
@@ -154,9 +154,10 @@ class DQN:
 			obs[obs == -1] = -1 * self.penalty_factor if self.reward_polarity else 0
 			return np.array([obs.sum()], dtype=int)
 		else:
-			Rewards = np.zeros(self.reward_dim2, dtype=int)
+			# has problems
+			Rewards = np.zeros(self.action_dim2, self.n_nodes, dtype=int)
 			Rewards[obs[np.abs(obs).sum(1) == 1] == -1] = 1
-			return Rewards.flatten()
+			return Rewards
 
 	# update memory
 	def store_transition(self, s, a, R, s_):
