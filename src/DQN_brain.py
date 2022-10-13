@@ -154,9 +154,9 @@ class DQN:
 			obs[obs == -1] = -1 * self.penalty_factor if self.reward_polarity else 0
 			return np.array([obs.sum()], dtype=int)
 		else:
-			# has problems
 			Rewards = np.zeros(self.action_dim2, self.n_nodes, dtype=int)
-			Rewards[obs[np.abs(obs).sum(1) == 1] == -1] = 1
+			Rewards[obs == -1] = 1
+			Rewards[np.abs(obs).sum(1) != 1] = 0
 			return Rewards
 
 	# update memory
