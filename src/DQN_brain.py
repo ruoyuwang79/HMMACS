@@ -53,17 +53,18 @@ class DQN:
 		# action shape: action_dim1 (batch size) * action_dim2
 		self.action_dim2 = 1 if self.sink_mode == 0 else self.num_sub_slot
 		# observation shape: observation cannot reduce, therefore, it contains sub slot factor
-		self.obs_dim2 = self.num_sub_slot if self.sink_mode == 0 else self.n_nodes * self.num_sub_slot
-		# reward shape: reward_dim1 (batch size) * reward_dim2
-		self.reward_dim2 = 1 if self.sink_mode == 0 else self.n_nodes * self.num_sub_slot
+		self.obs_dim2 = self.num_sub_slot if self.sink_mode == 0 else self.num_sub_slot * self.n_nodes
+		# reward shape: reward_dim1 (batch size) * reward_dim2 * reward_dim3
+		self.reward_dim2 = 1 if self.sink_mode == 0 else self.action_dim2
+		self.reward_dim3 = 1 if self.sink_mode == 0 else self.n_nodes
 		# time slot state: s = (a, obs, R), obs in sub time slot
-		self.time_slot_state_size = self.action_dim2 + self.obs_dim2 + self.reward_dim2
+		self.time_slot_state_size = self.action_dim2 + self.obs_dim2 + self.reward_dim2 * self.reward_dim3
 		# state: S = state_len * s
 		self.state_size = self.time_slot_state_size * self.state_len
 		# number of stored past stats
 		self.memory_size = memory_size
 		# memory state: (S, a, R, S_)
-		self.memory = np.zeros((self.memory_size, self.state_size * 2 + (self.action_dim2 + self.reward_dim2)), dtype=int) 
+		self.memory = np.zeros((self.memory_size, self.state_size * 2 + (self.action_dim2 + self.reward_dim2 * self.reward_dim3)), dtype=int) 
 		
 		# frequency of target network update
 		self.replace_target_iter = replace_target_iter
@@ -114,7 +115,7 @@ class DQN:
 		h8 = Dense(64, activation="relu", kernel_initializer=he_normal(seed=27567))(h7) #h6
 		add3 = Add()([h7, add2])
 
-		outputs =  Dense(self.action_dim2 * self.n_actions * self.reward_dim2, kernel_initializer=he_normal(seed=27))(add3)
+		outputs =  Dense(self.action_dim2 * self.n_actions * self.reward_dim3, kernel_initializer=he_normal(seed=27))(add3)
 		model = Model(inputs=inputs, outputs=outputs)
 		model.compile(loss='mse', optimizer=RMSprop(learning_rate=self.learning_rate))
 		return model
@@ -122,7 +123,7 @@ class DQN:
 	# use Q value to determine action
 	def get_action(self, action_values):
 		# reshape the flatten output and get the sum up expectation of each action
-		action_values_list = action_values.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2)).sum(3)
+		action_values_list = action_values.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim3)).sum(3)
 		# get the action that maximize the system throughput
 		return action_values_list.argmax(2)
 
@@ -149,15 +150,16 @@ class DQN:
 	# the idx=0 in the first dim of the obs should be agent
 	# TODO: more advanced reward function
 	# sink agent case, the observation is quite different
+	# Notice: the function does not support batch
 	def get_rewards(self, obs):
 		if self.sink_mode == 0:
 			obs[obs == -1] = -1 * self.penalty_factor if self.reward_polarity else 0
 			return np.array([obs.sum()], dtype=int)
 		else:
-			Rewards = np.zeros(self.action_dim2, self.n_nodes, dtype=int)
+			Rewards = np.zeros((self.reward_dim2, self.reward_dim3), dtype=int)
 			Rewards[obs == -1] = 1
 			Rewards[np.abs(obs).sum(1) != 1] = 0
-			return Rewards
+			return Rewards.flatten()
 
 	# update memory
 	def store_transition(self, s, a, R, s_):
@@ -193,14 +195,17 @@ class DQN:
 
 		state      = batch_memory[:, :self.state_size]
 		action     = batch_memory[:, self.state_size:self.state_size + self.action_dim2]
-		Rewards    = batch_memory[:, self.state_size + self.action_dim2:self.state_size + self.action_dim2 + self.reward_dim2]
+		Rewards    = batch_memory[:, self.state_size + self.action_dim2:self.state_size + self.action_dim2 + self.reward_dim2 * self.reward_dim3]
 		next_state = batch_memory[:, -self.state_size:]
 
 		# q(S_t, A)
-		q = self.model.predict(state, verbose=0).reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))
+		q = self.model.predict(state, verbose=0)
 		# q(S'_t, A)
-		q_targ = self.target_model.predict(next_state, verbose=0).reshape((-1, self.action_dim2, self.n_actions, self.reward_dim2))
+		q_targ = self.target_model.predict(next_state, verbose=0)
 		action_ = self.get_action(q_targ)
+
+		q = q.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim3))
+		q_targ = q_targ.reshape((-1, self.action_dim2, self.n_actions, self.reward_dim3))
 
 		# Bellman equation
 		batch_idx = np.array([i for i in range(self.batch_size)], dtype=int)
@@ -208,19 +213,20 @@ class DQN:
 		if self.sink_mode == 0:
 			q[batch_idx, sub_slot_idx, action, :] = (1 - self.alpha) * q[batch_idx, sub_slot_idx, action, :] + self.alpha * (Rewards + self.gamma * q_targ[batch_idx, sub_slot_idx, action_, :])
 		else:
-			Rewards = Rewards.reshape((-1, self.action_dim2, self.n_nodes))
+			Rewards = Rewards.reshape((-1, self.reward_dim2, self.reward_dim3))
 			for i in range(self.action_dim2):
-				q[batch_idx, i, action[:, i], :] = (1 - self.alpha) * q[batch_idx, i, action[:, i], :] + self.alpha * (Rewards[:, i, :] + self.gamma * q_targ[batch_idx, i, action_[:, i], :])
+				q[batch_idx, i, action[batch_idx, i], :] = (1 - self.alpha) * q[batch_idx, i, action[batch_idx, i], :] \
+														 + self.alpha * (Rewards[batch_idx, i, :] + self.gamma * q_targ[batch_idx, i, action_[batch_idx, i], :])
 
 		# internal NN training
-		self.model.fit(state, q.reshape(-1, self.action_dim2 * self.n_actions * self.reward_dim2), self.batch_size, epochs=1, verbose=0)
+		self.model.fit(state, q.reshape(-1, self.action_dim2 * self.n_actions * self.reward_dim3), self.batch_size, epochs=1, verbose=0)
 
 	# store configs
 	def finalize(self):
 		if self.save_trace:
 			with open(self.config_name, 'a') as f:
 				config_list = ['state_len', 'n_nodes', 'num_sub_slot', 'n_actions', 'mac_mode', 'sink_mode', 'reward_polarity',
-							   'reward_dim2',  'time_slot_state_size', 'memory_size', 'replace_target_iter', 'batch_size', 'learning_rate',
+							   'time_slot_state_size', 'memory_size', 'replace_target_iter', 'batch_size', 'learning_rate',
 							   'gamma', 'epsilon', 'epsilon_min', 'epsilon_decay', 'alpha', 'penalty_factor']
 				f.write('\n======= DQN model =======\n')
 				f.write('\n'.join([f'{config_key}: {self.__dict__[config_key]}' for config_key in config_list]))
