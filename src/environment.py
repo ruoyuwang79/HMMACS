@@ -351,6 +351,8 @@ class ENVIRONMENT(object):
 			sub_slot_action[nodes_idx == self.previous_action] = 1
 			Observations[i, :], self.previous_action, Success_trace[i, :] = self.channel.cycle(sub_slot_action, broadcast[i], self.packet_length)
 
+		# known bug: even have not finish previous packet, the source can still send
+		# constrain: following time slots should be idle after an action
 		if self.save_trace:
 			self.transmission_logs[self.trace_counter, :] = Success_trace.sum(0)
 			self.trace_counter += 1
