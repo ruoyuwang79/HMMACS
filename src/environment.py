@@ -217,6 +217,7 @@ class ENVIRONMENT(object):
 		assert self.nodes_mask.size == self.n_nodes
 		self.packet_length = packet_length
 		self.guard_length = guard_length
+		self.sending_counter = np.zeros(self.n_nodes, dtype=int)
 
 		# conventional nodes decision making parameters
 		self.node_actions = np.zeros(self.n_nodes, dtype=int)
@@ -318,8 +319,13 @@ class ENVIRONMENT(object):
 		for i in range(self.num_sub_slot):
 			sub_slot_action = np.zeros(self.n_nodes, dtype=int)
 			sub_slot_action[self.node_actions == 1] = 1
+			# eliminate overlapping sending case
+			sub_slot_action[self.sending_counter != 0] = 0
+			self.sending_counter[sub_slot_action == 1] = self.packet_length
 			# for async mode, when action == 1, it is time to go
 			self.node_actions -= 1
+			self.sending_counter -= 1
+			self.sending_counter[self.sending_counter < 0] = 0
 			# Note: obs may contain -1, represent noting
 			Observations[i, :], Success_trace[i, :] = self.channel.step(sub_slot_action, self.packet_length)
 		
@@ -349,6 +355,11 @@ class ENVIRONMENT(object):
 		for i in range(self.num_sub_slot):
 			sub_slot_action = np.zeros(self.n_nodes, dtype=int)
 			sub_slot_action[nodes_idx == self.previous_action] = 1
+			# eliminate overlapping sending case
+			sub_slot_action[self.sending_counter != 0] = 0
+			self.sending_counter[sub_slot_action == 1] = self.packet_length
+			self.sending_counter -= 1
+			self.sending_counter[self.sending_counter < 0] = 0
 			Observations[i, :], self.previous_action, Success_trace[i, :] = self.channel.cycle(sub_slot_action, broadcast[i], self.packet_length)
 
 		# known bug: even have not finish previous packet, the source can still send

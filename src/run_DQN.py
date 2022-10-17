@@ -69,7 +69,8 @@ if __name__ == "__main__":
 	max_backoff = 2
 
 	env_mode = 1
-	mac_mode = 0
+	env_mac_mode = 0
+	agent_mac_mode = 0
 	sink_mode = 0
 	reward_polarity = False
 
@@ -119,7 +120,7 @@ if __name__ == "__main__":
 					  window_size = window_size,
 					  max_backoff = max_backoff,
 					  env_mode = env_mode,
-					  mac_mode = mac_mode,
+					  mac_mode = env_mac_mode,
 					  sink_mode = sink_mode,
 					  nodes_delay = delay,
 					  num_sub_slot = num_sub_slot,
@@ -142,7 +143,7 @@ if __name__ == "__main__":
 				epsilon_min = epsilon_min,
 				epsilon_decay = epsilon_decay,
 				alpha = alpha,
-				mac_mode = mac_mode,
+				mac_mode = agent_mac_mode,
 				sink_mode = sink_mode,
 				reward_polarity = reward_polarity,
 				penalty_factor = penalty_factor,
