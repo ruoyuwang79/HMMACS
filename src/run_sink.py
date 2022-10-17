@@ -76,11 +76,13 @@ if __name__ == "__main__":
 
 	# mask used for hybrid network
 	# Xuan's case 1
-	delay = np.array([28, 10, 20], dtype=int)
+	# delay = np.array([28, 10, 20], dtype=int)
 	# Xuan's case 2
 	# delay = np.array([13, 13, 13], dtype=int)
 	# Xuan's agent-qALOHA coesist
 	# delay = np.random.randint(1, 83, n_nodes)
+	# Ruoyu test-case for learning
+	delay = np.array([1, 40, 80], dtype=int)
 	num_sub_slot = 20
 
 	state_len = 20 # state length
@@ -97,7 +99,7 @@ if __name__ == "__main__":
 	epsilon_decay = 0.995
 	
 	save_trace = True
-	max_iter = 10000
+	max_iter = 50000
 	log_path = '../logs/'
 	config_path = '../configs/'
 	file_prefix = 'test_sink_'
