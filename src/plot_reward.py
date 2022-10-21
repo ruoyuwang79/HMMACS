@@ -18,8 +18,12 @@ Rewards_logs = np.insert(Rewards_logs, 0, 0, axis=0)
 cumsum = np.cumsum(Rewards_logs, axis=0)
 Throughput = (cumsum[N:] - cumsum[:-N]) / float(N)
 
+fig = plt.figure()
+ax = fig.add_subplot(111)
 for i in range(n_nodes):
     plt.plot(Throughput[:, i])
-    plt.savefig(fig_path + file_name + fig_suffix)
+    ax.set_ylabel('throughput')
+    ax.set_xlabel('time slot')
     print(f'the {i + 1}-th node has throughput {Throughput[-1, i]:.4f}')
+plt.savefig(fig_path + file_name + fig_suffix)
 print(f'the system throughput is {Throughput[-1].sum():.4f}')
