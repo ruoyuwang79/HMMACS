@@ -48,7 +48,7 @@ class DELAY_QUEUE(object):
 		if self.n_transmission > 0:
 			return self.delay_channel[self.n_transmission - 1], self.packet_length[self.n_transmission - 1], self.packet_data[self.n_transmission - 1]
 		else:
-			return -1, -1, -1
+			return 0xffffffff, -1, -1
 
 	def pop(self):
 		# check the oldest packet in the queue
@@ -67,7 +67,7 @@ class DELAY_QUEUE(object):
 	
 	# API for mobility update
 	def update_delay(self, new_delay):
-		self.delay = new_delay
+		self.delay = new_delay if new_delay > 0 else 1
 
 	# API between CHANNEL and DELAY_QUEUE
 	# Input: length-the transmission packet length at current sub time slot
@@ -433,8 +433,8 @@ class ENVIRONMENT(object):
 
 
 # testing DELAY_QUEUE script
-# delay = 10
-# num_sub_slot = 1
+# delay = 5
+# num_sub_slot = 2
 # print('delay:')
 # print(delay)
 # test_dq = DELAY_QUEUE(delay)

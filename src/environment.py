@@ -48,7 +48,7 @@ class DELAY_QUEUE(object):
 		if self.n_transmission > 0:
 			return self.delay_channel[self.n_transmission - 1], self.packet_length[self.n_transmission - 1], self.packet_data[self.n_transmission - 1]
 		else:
-			return -1, -1, -1
+			return 0xffffffff, -1, -1
 
 	def pop(self):
 		# check the oldest packet in the queue
@@ -67,7 +67,7 @@ class DELAY_QUEUE(object):
 	
 	# API for mobility update
 	def update_delay(self, new_delay):
-		self.delay = new_delay
+		self.delay = new_delay if new_delay > 0 else 1
 
 	# API between CHANNEL and DELAY_QUEUE
 	# Input: length-the transmission packet length at current sub time slot
@@ -394,8 +394,6 @@ class ENVIRONMENT(object):
 			self.sending_counter[self.sending_counter < 0] = 0
 			Observations[i, :], self.previous_action, Success_trace[i, :] = self.channel.cycle(sub_slot_action, broadcast[i], self.packet_length)
 
-		# known bug: even have not finish previous packet, the source can still send
-		# constrain: following time slots should be idle after an action
 		if self.save_trace:
 			self.transmission_logs[self.trace_counter, :] = Success_trace.sum(0)
 			self.trace_counter += 1
@@ -416,6 +414,13 @@ class ENVIRONMENT(object):
 				zero_padding_actions[nodes_idx == self.previous_action] = 1
 				zero_padding_actions[nodes_idx != self.previous_action] = 0
 				_, self.previous_action, Success_trace[i, :] = self.channel.cycle(zero_padding_actions, 1023, self.packet_length)
+			# mobility update
+			if self.movable and self.move_freq != 0:
+				self.move_counter += 1
+				if (1 / self.move_counter) <= self.move_freq:
+					self.nodes_delay += np.random.randint(-self.mobility, self.mobility + 1, self.n_nodes, dtype=int)
+					self.channel.update_delay(self.nodes_delay)
+					self.move_counter = 0
 
 		if self.save_trace:
 			self.transmission_logs[self.trace_counter, :] = Success_trace.sum(0)
@@ -426,7 +431,7 @@ class ENVIRONMENT(object):
 							   'tdma', 'aloha_prob', 'window_size', 'max_backoff', 'env_mode', 'mac_mode', 'sink_mode',
 							   'nodes_delay', 'num_sub_slot', 'movable', 'mobility', 'move_freq']
 				f.write('\n======= ENVIRONMENT =======\n')
-				f.write('\n'.join([f'{config_key}: {self.__dict__[config_key]}' for config_key in config_list]))
+				f.write('\n'.join([f'{config_key}: {self.__dict__[config_key]}' for config_key in config_list if config_key in self.__dict__]))
 				f.write('\n')
 				f.close()
 		return self.channel.get_trace()

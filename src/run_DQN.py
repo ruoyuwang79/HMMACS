@@ -48,12 +48,12 @@ def main(max_iter, env, agent=None, sim_mode=1):
 # set running configurations here
 # TODO: load saved configurations
 if __name__ == "__main__":
-	n_agents = 0
-	n_others = 3
+	n_agents = 1
+	n_others = 2
 	n_nodes = n_agents + n_others # number of nodes
-	nodes_mask = np.random.randint(1, 5, n_nodes)
+	# nodes_mask = np.random.randint(1, 5, n_nodes)
 	# Xuan's case 1 & 2
-	# nodes_mask = np.array([0, 1, 2], dtype=int)
+	nodes_mask = np.array([0, 1, 2], dtype=int)
 	# Xuan's agent-qALOHA coesist
 	# nodes_mask = 2 * np.ones(n_nodes, dtype=int)
 	# the first one should be the agent
@@ -64,23 +64,23 @@ if __name__ == "__main__":
 
 	tdma_occupancy = 3
 	tdma_period = 10
-	aloha_prob = 0.7
+	aloha_prob = 0.2
 	window_size = 2
 	max_backoff = 2
 
 	env_mode = 1
-	env_mac_mode = 0
-	agent_mac_mode = 0
+	env_mac_mode = 1
+	agent_mac_mode = 1
 	sink_mode = 0
 	reward_polarity = False
 
 	# mask used for hybrid network
 	# Xuan's case 1
-	# delay = np.array([28, 10, 20], dtype=int)
+	delay = np.array([28, 10, 20], dtype=int)
 	# Xuan's case 2
 	# delay = np.array([13, 13, 13], dtype=int)
 	# Xuan's agent-qALOHA coesist
-	delay = np.random.randint(1, 83, n_nodes)
+	# delay = np.random.randint(1, 83, n_nodes)
 	num_sub_slot = 20
 
 	state_len = 20 # state length
@@ -96,12 +96,12 @@ if __name__ == "__main__":
 	epsilon_min = 0.01
 	epsilon_decay = 0.995
 	
-	movable = True
-	mobility = 2
+	movable = False
+	mobility = 1
 	# in sub time slot
-	move_freq = 1 / 100
+	move_freq = 1 / 200
 
-	save_trace = False
+	save_trace = True
 	max_iter = 5000
 	log_path = '../logs/'
 	config_path = '../configs/'
