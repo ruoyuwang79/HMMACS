@@ -1,4 +1,4 @@
-import numpy as np 
+import numpy as np
 
 # Optimized for performance
 # Note: not multi-thread safe
@@ -430,3 +430,41 @@ class ENVIRONMENT(object):
 				f.write('\n')
 				f.close()
 		return self.channel.get_trace()
+
+
+# testing DELAY_QUEUE script
+# delay = 10
+# num_sub_slot = 1
+# print('delay:')
+# print(delay)
+# test_dq = DELAY_QUEUE(delay)
+# # make sure non-overlapping
+# packet_counter = 0
+
+# for time in range(100):
+# 	action = np.random.randint(0, 2) if packet_counter == 0 else 0
+# 	packet_size = action * np.random.randint(1, 4)
+# 	packet_data = action * np.random.randint(0, 4096)
+# 	packet_counter = packet_counter - 1 if packet_counter != 0 else max(packet_size - 1, 0)
+# 	output_obs, output_data = test_dq.step(packet_size, packet_data)
+# 	print('time: {:d}, action: {:d}, packet size: {:d}, packet data: {:d}, output: {:d} output data: {:d}'.format(time, action, packet_size, packet_data, output_obs, output_data))
+
+# testing CHANNEL script
+n_nodes = 3
+# delay = np.random.randint(1, 5, n_nodes, dtype=int)
+# delay[0] = 1
+# delay = np.ones(n_nodes, dtype=int)
+delay = np.array([1,2,3])
+num_sub_slot = 1
+print('delay:')
+print(delay)
+test_c = CHANNEL(n_nodes, delay, num_sub_slot)
+
+for time in range(20):
+	action = np.zeros(n_nodes, dtype=int)
+	action[np.random.choice(n_nodes, 2)] = np.random.randint(0, 2, 2, dtype=int)
+	print('action:')
+	print(action)
+	print('return:')
+	print(test_c.step(action))
+print(test_c)

@@ -97,8 +97,13 @@ if __name__ == "__main__":
 	epsilon = 1
 	epsilon_min = 0.01
 	epsilon_decay = 0.995
+
+	movable = True
+	mobility = 2
+	# in sub time slot
+	move_freq = 1 / 100
 	
-	save_trace = True
+	save_trace = False
 	max_iter = 50000
 	log_path = '../logs/'
 	config_path = '../configs/'
@@ -126,6 +131,9 @@ if __name__ == "__main__":
 					  sink_mode = sink_mode,
 					  nodes_delay = delay,
 					  num_sub_slot = num_sub_slot,
+					  movable = movable,
+					  mobility = mobility,
+					  move_freq = move_freq,
 					  save_trace = save_trace,
 					  n_iter = max_iter,
 					  log_name = log_path + file_prefix + file_name + file_timestamp + log_suffix,
