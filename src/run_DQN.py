@@ -97,9 +97,10 @@ if __name__ == "__main__":
 	epsilon_decay = 0.995
 	
 	movable = False
+	# unit is sub time slot, must be int
 	mobility = 1
 	# in sub time slot
-	move_freq = 1 / 200
+	move_freq = 1 / 2000
 
 	save_trace = True
 	max_iter = 5000

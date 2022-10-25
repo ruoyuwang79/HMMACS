@@ -229,6 +229,6 @@ class DQN:
 							   'time_slot_state_size', 'memory_size', 'replace_target_iter', 'batch_size', 'learning_rate',
 							   'gamma', 'epsilon', 'epsilon_min', 'epsilon_decay', 'alpha', 'penalty_factor']
 				f.write('\n======= DQN model =======\n')
-				f.write('\n'.join([f'{config_key}: {self.__dict__[config_key]}' for config_key in config_list]))
+				f.write('\n'.join([f'{config_key}: {self.__dict__[config_key]}' for config_key in config_list if config_key in self.__dict__]))
 				f.write('\n')
 				f.close()

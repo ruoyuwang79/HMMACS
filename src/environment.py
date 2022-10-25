@@ -90,18 +90,13 @@ class DELAY_QUEUE(object):
 
 # collection of all-nodes full-duplex channels
 class CHANNEL(object):
-	def __init__(self,
-				 n_nodes,
-				 delay,
-				 sub_slot_length=1):
+	def __init__(self, n_nodes, delay):
 		super(CHANNEL, self).__init__()
 		# number of nodes of the system
 		self.n_nodes = n_nodes
 		# delay is an integer vector with n_nodes length
 		# delay * sub time slot length * propagation speed = distance
 		self.delay = delay
-		# sub time slot length, unit in nano second (10^-9 s)
-		self.sub_slot_length = sub_slot_length
 		# the memory used to track transmitting packets
 		self.sink_receiving_counter = np.zeros(self.n_nodes, dtype=int)
 		self.sink_throughput_trace = np.zeros(self.n_nodes, dtype=int)
@@ -199,6 +194,7 @@ class ENVIRONMENT(object):
 				 nodes_mask,
 				 packet_length=1,
 				 guard_length=1,
+				 sub_slot_length=1e7,
 				 tdma_occupancy = 2,
 				 tdma_period = 10,
 				 aloha_prob = 0.2,
@@ -233,6 +229,9 @@ class ENVIRONMENT(object):
 		self.packet_length = packet_length
 		self.guard_length = guard_length
 		self.sending_counter = np.zeros(self.n_nodes, dtype=int)
+		# sub time slot length, unit in nano second (10^-9 s)
+		# default 0.01 s
+		self.sub_slot_length = sub_slot_length
 
 		# conventional nodes decision making parameters
 		self.node_actions = np.zeros(self.n_nodes, dtype=int)
@@ -330,6 +329,20 @@ class ENVIRONMENT(object):
 		# shift [0, 1, 2] to [-1, 0, 1]
 		Observations -= 1
 		return Observations
+	
+	def distance2delay(self, distance):
+		# RF propagation delay can be neglect
+		if self.env_mode == 0:
+			return np.ones(self.n_nodes, dtype=int)
+		else:
+			# distance should in unit of meter
+			# UAN propagation speed 1500m/s
+			# ceil rather than floor
+			return -(((distance / 1500) * 1e9) // -self.sub_slot_length)
+
+	def update_delay(self, delay):
+		self.nodes_delay += delay
+		self.channel.update_delay(self.nodes_delay)
 
 	# src-agent ENV API
 	# there is no more than 1 agents, the action is an integer
@@ -357,8 +370,7 @@ class ENVIRONMENT(object):
 			if self.movable and self.move_freq != 0:
 				self.move_counter += 1
 				if (1 / self.move_counter) <= self.move_freq:
-					self.nodes_delay += np.random.randint(-self.mobility, self.mobility + 1, self.n_nodes, dtype=int)
-					self.channel.update_delay(self.nodes_delay)
+					self.update_delay(np.random.randint(-self.mobility, self.mobility + 1, self.n_nodes, dtype=int))
 					self.move_counter = 0
 		
 		# how to use depends on the agent
