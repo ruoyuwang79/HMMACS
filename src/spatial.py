@@ -29,6 +29,9 @@ class SPATIAL():
     def __getitem__(self, idx):
         return (self.x[idx], self.y[idx], self.z[idx])
 
+    def get_all_position(self):
+        return self.x, self.y, self.z
+
     # TODO: add the capability to get distance of any given nodes pair
     def get_distance(self):
         return np.sqrt(self.x**2 + self.y**2 + self.z**2)
