@@ -3,7 +3,10 @@ import matplotlib.pyplot as plt
 
 # to maximize the efficiency, once initlized, cannot add new nodes
 class SPATIAL():
-    def __init__(self, n_nodes, track, scale=5e3, time_granularity=1e7, random_init=True, x=None, y=None, z=None):
+    def __init__(self, n_nodes, track, 
+                 scale=5e3, time_granularity=1e7, 
+                 random_init=True, x=None, y=None, z=None,
+                 save_track=False, fig_name=''):
         # number of source nodes
         self.n_nodes = n_nodes
         # all nodes track function
@@ -38,7 +41,7 @@ class SPATIAL():
 
     # return the normalize new speed
     def get_direction(self):
-        dv = np.array([self.track[i](self.x[i], self.y[i], self.z[i]) for i in range(self.n_nodes)], dtype=float)
+        dv = np.array([self.track[i](self.vx[i], self.vy[i], self.vz[i]) for i in range(self.n_nodes)], dtype=float)
         dvx = dv[:, 0]
         dvy = dv[:, 1]
         dvz = dv[:, 2]
@@ -51,12 +54,15 @@ class SPATIAL():
     # current scheme: given new speed, use the mean of them to update
     # theoretical base: slope calculation
     def update_v(self, dvx, dvy, dvz):
-        self.vx += dvx
-        self.vy += dvy
-        self.vz += dvz
-        self.vx /= 2
-        self.vy /= 2
-        self.vz /= 2
+        # self.vx += dvx
+        # self.vy += dvy
+        # self.vz += dvz
+        # self.vx /= 2
+        # self.vy /= 2
+        # self.vz /= 2
+        self.vx = dvx
+        self.vy = dvy
+        self.vz = dvz
 
     # velocity in m/s, time granularity in ns, distance in m
     def update_position(self):
@@ -78,7 +84,17 @@ class track_functions():
         print('track function helper initlized')
     
     def static(self):
-        return lambda x, y, z: (0, 0, 0)
+        return lambda vx, vy, vz: (0, 0, 0)
 
     def linear(self, dx, dy, dz):
-        return lambda x, y, z: (dx, dy, dz)
+        return lambda vx, vy, vz: (dx, dy, dz)
+
+    def spiral(self, angular_velocity, velocity, dz):
+        def spiral_func(vx, vy, vz):
+            epsilon = 1e-7
+            new_theta = np.arctan(vx / (vy + epsilon)) + angular_velocity + (np.pi if vy < 0 else 0)
+            dvx = np.sqrt(velocity) * np.sin(new_theta)
+            dvy = np.sqrt(velocity) * np.cos(new_theta)
+            dvz = dz
+            return dvx, dvy, dvz
+        return spiral_func
