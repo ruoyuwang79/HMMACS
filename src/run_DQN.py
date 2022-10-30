@@ -49,11 +49,11 @@ def main(max_iter, env, agent=None, sim_mode=1):
 # TODO: load saved configurations
 if __name__ == "__main__":
 	n_agents = 1
-	n_others = 2
+	n_others = 9
 	n_nodes = n_agents + n_others # number of nodes
-	# nodes_mask = np.random.randint(1, 5, n_nodes)
+	nodes_mask = np.random.randint(1, 5, n_nodes)
 	# Xuan's case 1 & 2
-	nodes_mask = np.array([0, 1, 2], dtype=int)
+	# nodes_mask = np.array([0, 1, 2], dtype=int)
 	# Xuan's agent-qALOHA coesist
 	# nodes_mask = 2 * np.ones(n_nodes, dtype=int)
 	# the first one should be the agent
@@ -61,6 +61,8 @@ if __name__ == "__main__":
 	
 	packet_length = 3
 	guard_length = 3
+	# 1e7 * 1e-9 s
+	sub_slot_length = 1e7
 
 	tdma_occupancy = 3
 	tdma_period = 10
@@ -76,16 +78,18 @@ if __name__ == "__main__":
 
 	# mask used for hybrid network
 	# Xuan's case 1
-	delay = np.array([28, 10, 20], dtype=int)
+	# delay = np.array([28, 10, 20], dtype=int)
 	# Xuan's case 2
 	# delay = np.array([13, 13, 13], dtype=int)
 	# Xuan's agent-qALOHA coesist
 	# delay = np.random.randint(1, 83, n_nodes)
+	# Ruoyu's mobility test (will be overwritten by the sptial)
+	delay = np.random.randint(1, 133, n_nodes)
 	num_sub_slot = 20
 
-	state_len = 20 # state length
-	memory_size = 1000 # memory size
-	replace_target_iter = 20 # target network update frequency
+	state_len = 20 # state length (in # of time slots)
+	memory_size = 1000 # memory size (in # of states)
+	replace_target_iter = 20 # target network update frequency (in # of time slots)
 	batch_size = 64 # mini-batch size
 	gamma = 0.9 # discount factor
 	alpha = 1 # Bellman equation learning rate
@@ -96,21 +100,25 @@ if __name__ == "__main__":
 	epsilon_min = 0.01
 	epsilon_decay = 0.995
 	
-	movable = False
-	# unit is sub time slot, must be int
-	mobility = 1
-	# in sub time slot
-	move_freq = 1 / 2000
+	movable = True
+	# unit in meter, can be any positive real number
+	# the sptial simulator will randomly generate nodes coordinates as
+	# (x, y, z) where x, y, z in [mobility * (0, 1)]
+	mobility = 2000
+	# move frequency in sub time slot
+	move_freq = 1
 
 	save_trace = True
-	max_iter = 5000
+	max_iter = 10000
 	log_path = '../logs/'
 	config_path = '../configs/'
+	fig_path = '../figs/'
 	file_prefix = 'demo_'
 	file_name = f'iter{max_iter}_N{n_nodes}_'
 	file_timestamp = f'{int(time())}'
 	log_suffix = '.txt'
 	config_suffix = '.conf'
+	fig_suffix = '.gif'
 
 	print('trace name:')
 	print(file_prefix + file_name + file_timestamp)
@@ -120,6 +128,7 @@ if __name__ == "__main__":
 					  nodes_mask,
 					  packet_length=packet_length,
 				 	  guard_length=guard_length,
+					  sub_slot_length=sub_slot_length,
 					  tdma_occupancy = tdma_occupancy,
 					  tdma_period = tdma_period,
 					  aloha_prob = aloha_prob,
@@ -136,7 +145,8 @@ if __name__ == "__main__":
 					  save_trace = save_trace,
 					  n_iter = max_iter,
 					  log_name = log_path + file_prefix + file_name + file_timestamp + log_suffix,
-					  config_name = config_path + file_prefix + file_name + file_timestamp + config_suffix
+					  config_name = config_path + file_prefix + file_name + file_timestamp + config_suffix,
+				 	  fig_name = fig_path + file_prefix + file_name + file_timestamp + fig_suffix,
 					 )
 
 	agent = DQN(state_len,
@@ -157,7 +167,7 @@ if __name__ == "__main__":
 				reward_polarity = reward_polarity,
 				penalty_factor = penalty_factor,
 				save_trace = save_trace,
-				config_name = config_path + file_prefix + file_name + file_timestamp + config_suffix
+				config_name = config_path + file_prefix + file_name + file_timestamp + config_suffix,
 			   )
 
 	main(max_iter, env, agent, n_agents)

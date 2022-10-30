@@ -66,12 +66,6 @@ class SPATIAL():
 
 	# use the new speed to replace the original
 	def update_v(self, dvx, dvy, dvz):
-		# self.vx += dvx
-		# self.vy += dvy
-		# self.vz += dvz
-		# self.vx /= 2
-		# self.vy /= 2
-		# self.vz /= 2
 		self.vx = dvx
 		self.vy = dvy
 		self.vz = dvz
@@ -106,29 +100,28 @@ class SPATIAL():
 
 		scatters = ax.scatter(self.history_positions[0, 0, :], self.history_positions[0, 1, :], self.history_positions[0, 2, :], c=self.color)
 
-		ani = animation.FuncAnimation(fig, animate_scatters, self.n_iter, fargs=(self.history_positions, scatters), interval=100, blit=False, repeat=True)
+		ani = animation.FuncAnimation(fig, animate_scatters, int(self.step_counter / 1000), fargs=(self.history_positions[::1000, :, :], scatters), interval=50, blit=False, repeat=True)
 
 		for i in range(self.n_nodes):
-			ax.plot(self.history_positions[:, 0, i], self.history_positions[:, 1, i], self.history_positions[:, 2, i], c=self.color[i])
+			ax.plot(self.history_positions[:self.step_counter, 0, i], self.history_positions[:self.step_counter, 1, i], self.history_positions[:self.step_counter, 2, i], c=self.color[i])
 
 		ani.save(self.fig_name)
 
 class track_functions():
 	def __init__(self):
-		print('track function helper initlized')
-	
+		super(track_functions, self).__init__()
+
 	def static(self):
 		return lambda vx, vy, vz: (0, 0, 0)
 
-	def linear(self, dx, dy, dz):
-		return lambda vx, vy, vz: (dx, dy, dz)
+	def linear(self, dvx, dvy, dvz):
+		return lambda vx, vy, vz: (dvx, dvy, dvz)
 
-	def spiral(self, angular_velocity, velocity, dz):
+	def spiral(self, angular_velocity, velocity, dvz):
 		def spiral_func(vx, vy, vz):
 			epsilon = 1e-7
 			new_theta = np.arctan(vx / (vy + epsilon)) + angular_velocity + (np.pi if vy < 0 else 0)
 			dvx = np.sqrt(velocity) * np.sin(new_theta)
 			dvy = np.sqrt(velocity) * np.cos(new_theta)
-			dvz = dz
 			return dvx, dvy, dvz
 		return spiral_func

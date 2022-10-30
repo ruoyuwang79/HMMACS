@@ -1,4 +1,5 @@
 import numpy as np 
+from spatial import SPATIAL, track_functions
 
 # Optimized for performance
 # Note: not multi-thread safe
@@ -212,6 +213,7 @@ class ENVIRONMENT(object):
 				 n_iter = 1000,
 				 log_name = '',
 				 config_name = '',
+				 fig_name = '',
 				 ):
 		super(ENVIRONMENT, self).__init__()
 		# Most important parameters
@@ -270,6 +272,20 @@ class ENVIRONMENT(object):
 			self.mobility = mobility
 			self.move_freq = move_freq
 			self.move_counter = 0
+			self.fig_name = fig_name
+
+			# set up the mobility simulator
+			n_move = int(n_iter * self.num_sub_slot * self.move_freq) + self.n_padding + 1
+			func_helper = track_functions()
+			color = [(np.random.rand(), np.random.rand(), np.random.rand()) for _ in range(self.n_nodes)]
+			track_funcs = [func_helper.linear(color[i][0] - 0.5, color[i][1] - 0.5, color[i][2] - 0.5) if np.random.rand() < 0.5 else func_helper.spiral(np.pi / (30 * color[i][0]), 20 * color[i][1], 5 * color[i][2]) for i in range(self.n_nodes)]
+			if self.n_agents == 1:
+				color[0] = (1, 0, 0)
+				track_funcs[0] = func_helper.static()
+			self.spatial = SPATIAL(self.n_nodes, track_funcs, scale=self.mobility, time_granularity=self.sub_slot_length, save_track=True, color=color, n_iter=n_move, fig_name=self.fig_name)
+			new_distribution = self.spatial.get_distance()
+			new_delay = self.distance2delay(new_distribution)
+			self.update_delay(new_delay)
 
 		# Ruoyu: Track the system throughput is the environment responsibility
 		# it has large overhead of memory, but we need that data
@@ -338,10 +354,10 @@ class ENVIRONMENT(object):
 			# distance should in unit of meter
 			# UAN propagation speed 1500m/s
 			# ceil rather than floor
-			return -(((distance / 1500) * 1e9) // -self.sub_slot_length)
+			return -(((distance / 1500) * 1e9) // -self.sub_slot_length).astype(int)
 
 	def update_delay(self, delay):
-		self.nodes_delay += delay
+		self.nodes_delay = delay
 		self.channel.update_delay(self.nodes_delay)
 
 	# src-agent ENV API
@@ -370,7 +386,10 @@ class ENVIRONMENT(object):
 			if self.movable and self.move_freq != 0:
 				self.move_counter += 1
 				if (1 / self.move_counter) <= self.move_freq:
-					self.update_delay(np.random.randint(-self.mobility, self.mobility + 1, self.n_nodes, dtype=int))
+					self.spatial.step()
+					new_distribution = self.spatial.get_distance()
+					new_delay = self.distance2delay(new_distribution)
+					self.update_delay(new_delay)
 					self.move_counter = 0
 		
 		# how to use depends on the agent
@@ -430,9 +449,14 @@ class ENVIRONMENT(object):
 			if self.movable and self.move_freq != 0:
 				self.move_counter += 1
 				if (1 / self.move_counter) <= self.move_freq:
-					self.nodes_delay += np.random.randint(-self.mobility, self.mobility + 1, self.n_nodes, dtype=int)
-					self.channel.update_delay(self.nodes_delay)
+					self.spatial.step()
+					new_distribution = self.spatial.get_distance()
+					new_delay = self.distance2delay(new_distribution)
+					self.update_delay(new_delay)
 					self.move_counter = 0
+
+		if self.movable and self.move_freq != 0:
+			self.spatial.plot_track()
 
 		if self.save_trace:
 			self.transmission_logs[self.trace_counter, :] = Success_trace.sum(0)
