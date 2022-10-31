@@ -51,7 +51,8 @@ if __name__ == "__main__":
 	n_agents = 1
 	n_others = 9
 	n_nodes = n_agents + n_others # number of nodes
-	nodes_mask = np.random.randint(1, 5, n_nodes)
+	# nodes_mask = np.random.randint(1, 5, n_nodes)
+	nodes_mask = np.array([0, 2, 2, 2, 1, 4, 2, 4, 2, 3], dtype=int)
 	# Xuan's case 1 & 2
 	# nodes_mask = np.array([0, 1, 2], dtype=int)
 	# Xuan's agent-qALOHA coesist
@@ -84,7 +85,8 @@ if __name__ == "__main__":
 	# Xuan's agent-qALOHA coesist
 	# delay = np.random.randint(1, 83, n_nodes)
 	# Ruoyu's mobility test (will be overwritten by the sptial)
-	delay = np.random.randint(1, 133, n_nodes)
+	# delay = np.random.randint(1, 133, n_nodes)
+	delay = np.array([132, 157, 140, 242, 249, 194, 101, 212, 211, 183], dtype=int)
 	num_sub_slot = 20
 
 	state_len = 20 # state length (in # of time slots)
@@ -100,7 +102,7 @@ if __name__ == "__main__":
 	epsilon_min = 0.01
 	epsilon_decay = 0.995
 	
-	movable = True
+	movable = False
 	# unit in meter, can be any positive real number
 	# the sptial simulator will randomly generate nodes coordinates as
 	# (x, y, z) where x, y, z in [mobility * (0, 1)]

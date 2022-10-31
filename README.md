@@ -3,7 +3,28 @@
 
 ## How to Use
 
+### Prerequisite
+
+- NumPy (most of data are maintained as np.array)
+
+- TensorFlow (DQN agent)
+- Matplotlib (for mobility animation)
+
 - In the ```src/``` directory, the ```run_{*}.py``` is the running script. Currently, the ```run_DQN.py``` is the simulation of intelligent-source.
+
+## Update Logs
+
+### Mobility Update
+
+- Allow mobility of sources nodes
+
+- User can use the self-designed track function to control nodes
+
+- The track function is velocity driven, input current velocity, output should be next step velocity
+
+- Demo
+
+  ![test](.\figs\test.gif)
 
 ## Note
 
