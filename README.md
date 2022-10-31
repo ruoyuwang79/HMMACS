@@ -24,7 +24,7 @@
 
 - Demo
 
-  ![test](.\figs\test.gif)
+  ![test](figs\test.gif)
 
 ## Note
 
