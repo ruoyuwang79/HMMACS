@@ -49,7 +49,7 @@ def main(max_iter, env, agent=None, sim_mode=1):
 # TODO: load saved configurations
 if __name__ == "__main__":
 	n_agents = 1
-	n_others = 9
+	n_others = 1
 	n_nodes = n_agents + n_others # number of nodes
 	# nodes_mask = np.random.randint(1, 5, n_nodes)
 	nodes_mask = np.array([0, 2, 2, 2, 1, 4, 2, 4, 2, 3], dtype=int)
@@ -102,20 +102,20 @@ if __name__ == "__main__":
 	epsilon_min = 0.01
 	epsilon_decay = 0.995
 	
-	movable = False
+	movable = True
 	# unit in meter, can be any positive real number
 	# the sptial simulator will randomly generate nodes coordinates as
-	# (x, y, z) where x, y, z in [mobility * (0, 1)]
+	# (x, y, z) where x, y, z in [mobility * (-0.5, 0.5)]
 	mobility = 2000
 	# move frequency in sub time slot
-	move_freq = 1
+	move_freq = 1 / 50
 
 	save_trace = True
-	max_iter = 10000
+	max_iter = 200
 	log_path = '../logs/'
 	config_path = '../configs/'
 	fig_path = '../figs/'
-	file_prefix = 'demo_'
+	file_prefix = 'test_'
 	file_name = f'iter{max_iter}_N{n_nodes}_'
 	file_timestamp = f'{int(time())}'
 	log_suffix = '.txt'

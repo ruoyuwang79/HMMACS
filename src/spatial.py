@@ -5,8 +5,8 @@ import matplotlib.animation as animation
 # to maximize the efficiency, once initlized, cannot add new nodes
 class SPATIAL():
 	def __init__(self, n_nodes, track, 
-				 scale=5e3, time_granularity=1e7, 
-				 random_init=True, x=None, y=None, z=None,
+				 scale=2e3, time_granularity=1e7, 
+				 random_init=True, distance=None,
 				 save_track=True, color=None, n_iter=1, fig_name=''):
 		# number of source nodes
 		self.n_nodes = n_nodes
@@ -19,13 +19,20 @@ class SPATIAL():
 		self.time_granularity = time_granularity
 		self.random_init = random_init
 		if self.random_init:
-			self.x = self.scale * (2 * np.random.rand(self.n_nodes) - 1)
-			self.y = self.scale * (2 * np.random.rand(self.n_nodes) - 1)
-			self.z = self.scale * (2 * np.random.rand(self.n_nodes) - 1)
+			self.x = self.scale * (np.random.rand(self.n_nodes) - 0.5)
+			self.y = self.scale * (np.random.rand(self.n_nodes) - 0.5)
+			self.z = self.scale * (np.random.rand(self.n_nodes) - 0.5)
 		else:
-			self.x = x
-			self.y = y
-			self.z = z
+			# give distance, randomly pick coordination on the smphere
+			# algorithm based on https://mathworld.wolfram.com/SpherePointPicking.html
+			# algorithm created by Muller 1959 and Marsaglia 1972
+			x = np.random.randn(self.n_nodes)
+			y = np.random.randn(self.n_nodes)
+			z = np.random.randn(self.n_nodes)
+			factor = distance / np.sqrt(x**2 + y**2 + z**2)
+			self.x = factor * x
+			self.y = factor * y
+			self.z = factor * z
 		self.vx = np.zeros(self.n_nodes, dtype=float)
 		self.vy = np.zeros(self.n_nodes, dtype=float)
 		self.vz = np.zeros(self.n_nodes, dtype=float)
@@ -52,17 +59,10 @@ class SPATIAL():
 	def get_distance(self):
 		return np.sqrt(self.x**2 + self.y**2 + self.z**2)
 
-	# return the normalize new speed
-	def get_direction(self):
+	# return the new speed
+	def get_v(self):
 		dv = np.array([self.track[i](self.vx[i], self.vy[i], self.vz[i]) for i in range(self.n_nodes)], dtype=float)
-		dvx = dv[:, 0]
-		dvy = dv[:, 1]
-		dvz = dv[:, 2]
-		factor = np.sqrt(dvx**2 + dvy**2 + dvz**2)
-		dvx[factor != 0] /= factor[factor != 0]
-		dvy[factor != 0] /= factor[factor != 0]
-		dvz[factor != 0] /= factor[factor != 0]
-		return dvx, dvy, dvz
+		return dv[:, 0], dv[:, 1], dv[:, 2]
 
 	# use the new speed to replace the original
 	def update_v(self, dvx, dvy, dvz):
@@ -77,7 +77,7 @@ class SPATIAL():
 		self.z += self.vz * self.time_granularity * 1e-9
 
 	def step(self):
-		dvx, dvy, dvz = self.get_direction()
+		dvx, dvy, dvz = self.get_v()
 		self.update_v(dvx, dvy, dvz)
 		self.update_position()
 		self.step_counter += 1
@@ -100,7 +100,8 @@ class SPATIAL():
 
 		scatters = ax.scatter(self.history_positions[0, 0, :], self.history_positions[0, 1, :], self.history_positions[0, 2, :], c=self.color)
 
-		ani = animation.FuncAnimation(fig, animate_scatters, int(self.step_counter / 1000), fargs=(self.history_positions[::1000, :, :], scatters), interval=50, blit=False, repeat=True)
+		# ani = animation.FuncAnimation(fig, animate_scatters, int(self.step_counter / 1000), fargs=(self.history_positions[::1000, :, :], scatters), interval=50, blit=False, repeat=True)
+		ani = animation.FuncAnimation(fig, animate_scatters, int(self.step_counter), fargs=(self.history_positions, scatters), interval=50, blit=False, repeat=True)
 
 		for i in range(self.n_nodes):
 			ax.plot(self.history_positions[:self.step_counter, 0, i], self.history_positions[:self.step_counter, 1, i], self.history_positions[:self.step_counter, 2, i], c=self.color[i])

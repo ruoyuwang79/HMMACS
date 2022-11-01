@@ -278,11 +278,15 @@ class ENVIRONMENT(object):
 			n_move = int(n_iter * self.num_sub_slot * self.move_freq) + self.n_padding + 1
 			func_helper = track_functions()
 			color = [(np.random.rand(), np.random.rand(), np.random.rand()) for _ in range(self.n_nodes)]
-			track_funcs = [func_helper.linear(color[i][0] - 0.5, color[i][1] - 0.5, color[i][2] - 0.5) if np.random.rand() < 0.5 else func_helper.spiral(np.pi / (30 * color[i][0]), 20 * color[i][1], 5 * color[i][2]) for i in range(self.n_nodes)]
+			# velocity = np.sqrt(3 * 0.5 ** 2) / (time_granularity * 1e-9)
+			track_funcs = [func_helper.linear(color[i][0] - 0.5, color[i][1] - 0.5, color[i][2] - 0.5) for i in range(self.n_nodes)]
 			if self.n_agents == 1:
 				color[0] = (1, 0, 0)
 				track_funcs[0] = func_helper.static()
-			self.spatial = SPATIAL(self.n_nodes, track_funcs, scale=self.mobility, time_granularity=self.sub_slot_length, save_track=True, color=color, n_iter=n_move, fig_name=self.fig_name)
+			self.spatial = SPATIAL(self.n_nodes, track_funcs, scale=self.mobility, 
+								   time_granularity=self.sub_slot_length / self.move_freq, 
+								   random_init=False, distance=self.delay2distance(self.nodes_delay),
+								   save_track=True, color=color, n_iter=n_move, fig_name=self.fig_name)
 			new_distribution = self.spatial.get_distance()
 			new_delay = self.distance2delay(new_distribution)
 			self.update_delay(new_delay)
@@ -355,6 +359,10 @@ class ENVIRONMENT(object):
 			# UAN propagation speed 1500m/s
 			# ceil rather than floor
 			return -(((distance / 1500) * 1e9) // -self.sub_slot_length).astype(int)
+
+	def delay2distance(self, delay):
+		# only the UAN needs to concern this concept
+		return 1500 * (delay.astype(float) * self.sub_slot_length * 1e-9)
 
 	def update_delay(self, delay):
 		self.nodes_delay = delay
