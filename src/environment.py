@@ -207,13 +207,15 @@ class ENVIRONMENT(object):
 				 nodes_delay = None,
 				 num_sub_slot = 1,
 				 movable = False,
-				 mobility = 0,
 				 move_freq = 0,
+				 scale = 2e3,
+				 random_init = True,
+				 track = None,
 				 save_trace = False,
 				 n_iter = 1000,
 				 log_name = '',
 				 config_name = '',
-				 fig_name = '',
+				 track_name = '',
 				 ):
 		super(ENVIRONMENT, self).__init__()
 		# Most important parameters
@@ -269,24 +271,20 @@ class ENVIRONMENT(object):
 		# Notice: once enable the movable, the delay will be untrackable
 		self.movable = movable
 		if self.movable:
-			self.mobility = mobility
 			self.move_freq = move_freq
+			self.scale = scale
+			self.random_init = random_init
 			self.move_counter = 0
-			self.fig_name = fig_name
 
 			# set up the mobility simulator
-			n_move = int(n_iter * self.num_sub_slot * self.move_freq) + self.n_padding + 1
-			func_helper = track_functions()
-			color = [(np.random.rand(), np.random.rand(), np.random.rand()) for _ in range(self.n_nodes)]
-			# velocity = np.sqrt(3 * 0.5 ** 2) / (time_granularity * 1e-9)
-			track_funcs = [func_helper.linear(color[i][0] - 0.5, color[i][1] - 0.5, color[i][2] - 0.5) for i in range(self.n_nodes)]
-			if self.n_agents == 1:
-				color[0] = (1, 0, 0)
-				track_funcs[0] = func_helper.static()
-			self.spatial = SPATIAL(self.n_nodes, track_funcs, scale=self.mobility, 
+			n_move = int((n_iter * self.num_sub_slot + self.n_padding) * self.move_freq) +  + 1
+			if track == None:
+				func_helper = track_functions()
+				track = [func_helper.static() for i in range(self.n_nodes)]
+			self.spatial = SPATIAL(self.n_nodes, track, scale=self.scale, 
 								   time_granularity=self.sub_slot_length / self.move_freq, 
-								   random_init=False, distance=self.delay2distance(self.nodes_delay),
-								   save_track=True, color=color, n_iter=n_move, fig_name=self.fig_name)
+								   random_init=self.random_init, distance=self.delay2distance(self.nodes_delay),
+								   save_trace=True, n_iter=n_move, file_name=track_name)
 			new_distribution = self.spatial.get_distance()
 			new_delay = self.distance2delay(new_distribution)
 			self.update_delay(new_delay)
@@ -311,6 +309,8 @@ class ENVIRONMENT(object):
 		self.window = np.random.randint(0, self.window_size * 2**self.eb_collision_count, dtype=int)
 		self.channel = CHANNEL(self.n_nodes, self.nodes_delay, self.num_sub_slot)
 		self.previous_action = np.zeros(self.num_sub_slot, dtype=int)
+		if self.movable:
+			self.move_counter = 0		
 		if self.save_trace:
 			self.trace_counter = 0
 
@@ -464,7 +464,7 @@ class ENVIRONMENT(object):
 					self.move_counter = 0
 
 		if self.movable and self.move_freq != 0:
-			self.spatial.plot_track()
+			self.spatial.finalize()
 
 		if self.save_trace:
 			self.transmission_logs[self.trace_counter, :] = Success_trace.sum(0)

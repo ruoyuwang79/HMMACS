@@ -1,13 +1,11 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 
 # to maximize the efficiency, once initlized, cannot add new nodes
 class SPATIAL():
 	def __init__(self, n_nodes, track, 
 				 scale=2e3, time_granularity=1e7, 
 				 random_init=True, distance=None,
-				 save_track=True, color=None, n_iter=1, fig_name=''):
+				 save_trace=False, n_iter=1, file_name=''):
 		# number of source nodes
 		self.n_nodes = n_nodes
 		# all nodes track function
@@ -37,17 +35,16 @@ class SPATIAL():
 		self.vy = np.zeros(self.n_nodes, dtype=float)
 		self.vz = np.zeros(self.n_nodes, dtype=float)
 
-		# for drawer
-		self.save_track = save_track
-		if self.save_track:
-			self.color = color
+		self.save_trace = save_trace
+		if self.save_trace:
 			self.n_iter = n_iter
+			self.file_name = file_name
 			self.step_counter = 0
 			self.history_positions = np.zeros((self.n_iter + 1, 3, self.n_nodes))
 			self.history_positions[self.step_counter, 0, :] = self.x
 			self.history_positions[self.step_counter, 1, :] = self.y
 			self.history_positions[self.step_counter, 2, :] = self.z
-			self.fig_name = fig_name
+
 
 	def __getitem__(self, idx):
 		return (self.x[idx], self.y[idx], self.z[idx])
@@ -55,7 +52,6 @@ class SPATIAL():
 	def get_all_position(self):
 		return self.x, self.y, self.z
 
-	# TODO: add the capability to get distance of any given nodes pair
 	def get_distance(self):
 		return np.sqrt(self.x**2 + self.y**2 + self.z**2)
 
@@ -85,28 +81,9 @@ class SPATIAL():
 		self.history_positions[self.step_counter, 1, :] = self.y
 		self.history_positions[self.step_counter, 2, :] = self.z
 
-	def get_color(self):
-		return self.color
-
-	# used to visualize
-	def plot_track(self):
-		assert self.save_track
-		fig = plt.figure()
-		ax = fig.add_subplot(projection='3d')
-
-		def animate_scatters(iteration, data, scatters):
-			scatters._offsets3d = (data[iteration, 0, :], data[iteration, 1, :], data[iteration, 2, :])
-			return scatters
-
-		scatters = ax.scatter(self.history_positions[0, 0, :], self.history_positions[0, 1, :], self.history_positions[0, 2, :], c=self.color)
-
-		# ani = animation.FuncAnimation(fig, animate_scatters, int(self.step_counter / 1000), fargs=(self.history_positions[::1000, :, :], scatters), interval=50, blit=False, repeat=True)
-		ani = animation.FuncAnimation(fig, animate_scatters, int(self.step_counter), fargs=(self.history_positions, scatters), interval=50, blit=False, repeat=True)
-
-		for i in range(self.n_nodes):
-			ax.plot(self.history_positions[:self.step_counter, 0, i], self.history_positions[:self.step_counter, 1, i], self.history_positions[:self.step_counter, 2, i], c=self.color[i])
-
-		ani.save(self.fig_name)
+	def finalize(self):
+		if self.save_trace:
+			np.savetxt(self.file_name, self.history_positions.reshape((-1, 3 * self.n_nodes)), fmt='%f')
 
 class track_functions():
 	def __init__(self):

@@ -5,6 +5,7 @@ from time import time
 
 from environment import ENVIRONMENT
 from DQN_brain import DQN
+from spatial import track_functions
 
 def main(max_iter, env, agent=None, sim_mode=1):
 	# other hyper parameters
@@ -52,7 +53,8 @@ if __name__ == "__main__":
 	n_others = 1
 	n_nodes = n_agents + n_others # number of nodes
 	# nodes_mask = np.random.randint(1, 5, n_nodes)
-	nodes_mask = np.array([0, 2, 2, 2, 1, 4, 2, 4, 2, 3], dtype=int)
+	# nodes_mask = np.array([0, 2, 2, 2, 1, 4, 2, 4, 2, 3], dtype=int)
+	nodes_mask = np.array([0, 2], dtype=int)
 	# Xuan's case 1 & 2
 	# nodes_mask = np.array([0, 1, 2], dtype=int)
 	# Xuan's agent-qALOHA coesist
@@ -77,6 +79,7 @@ if __name__ == "__main__":
 	sink_mode = 0
 	reward_polarity = False
 
+	delay_max = 100
 	# mask used for hybrid network
 	# Xuan's case 1
 	# delay = np.array([28, 10, 20], dtype=int)
@@ -84,9 +87,8 @@ if __name__ == "__main__":
 	# delay = np.array([13, 13, 13], dtype=int)
 	# Xuan's agent-qALOHA coesist
 	# delay = np.random.randint(1, 83, n_nodes)
-	# Ruoyu's mobility test (will be overwritten by the sptial)
-	# delay = np.random.randint(1, 133, n_nodes)
-	delay = np.array([132, 157, 140, 242, 249, 194, 101, 212, 211, 183], dtype=int)
+	# Ruoyu's mobility test
+	delay = np.random.randint(1, delay_max, n_nodes)
 	num_sub_slot = 20
 
 	state_len = 20 # state length (in # of time slots)
@@ -102,25 +104,29 @@ if __name__ == "__main__":
 	epsilon_min = 0.01
 	epsilon_decay = 0.995
 	
-	movable = True
-	# unit in meter, can be any positive real number
-	# the sptial simulator will randomly generate nodes coordinates as
-	# (x, y, z) where x, y, z in [mobility * (-0.5, 0.5)]
-	mobility = 2000
+	movable = False
 	# move frequency in sub time slot
 	move_freq = 1 / 50
+	# unit in meter, can be any positive real number
+	# the sptial simulator will randomly generate nodes coordinates as
+	# (x, y, z) where x, y, z in [scale * (-0.5, 0.5)]
+	scale = 2 * 1500 * (delay_max * sub_slot_length * 1e-9)
+	random_init = False
+	func_helper = track_functions()
+	# max velocity: np.sqrt(3 * 0.5 ** 2) / (sub_slot_length * 1e-9 / move_freq)
+	track = [func_helper.linear(np.random.rand() - 0.5, np.random.rand() - 0.5, np.random.rand() - 0.5) for i in range(n_nodes)]
+	track[0] = func_helper.static()
 
 	save_trace = True
-	max_iter = 200
+	max_iter = 10000
 	log_path = '../logs/'
 	config_path = '../configs/'
-	fig_path = '../figs/'
+	track_path = '../tracks/'
 	file_prefix = 'test_'
 	file_name = f'iter{max_iter}_N{n_nodes}_'
 	file_timestamp = f'{int(time())}'
 	log_suffix = '.txt'
 	config_suffix = '.conf'
-	fig_suffix = '.gif'
 
 	print('trace name:')
 	print(file_prefix + file_name + file_timestamp)
@@ -142,13 +148,15 @@ if __name__ == "__main__":
 					  nodes_delay = delay,
 					  num_sub_slot = num_sub_slot,
 					  movable = movable,
-					  mobility = mobility,
 					  move_freq = move_freq,
+					  scale = scale,
+					  random_init = random_init,
+					  track = track,
 					  save_trace = save_trace,
 					  n_iter = max_iter,
 					  log_name = log_path + file_prefix + file_name + file_timestamp + log_suffix,
 					  config_name = config_path + file_prefix + file_name + file_timestamp + config_suffix,
-				 	  fig_name = fig_path + file_prefix + file_name + file_timestamp + fig_suffix,
+				 	  track_name = track_path + file_prefix + file_name + file_timestamp + log_suffix,
 					 )
 
 	agent = DQN(state_len,
