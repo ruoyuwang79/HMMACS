@@ -95,8 +95,13 @@ class track_functions():
 	def linear(self, dvx, dvy, dvz):
 		return lambda vx, vy, vz: (dvx, dvy, dvz)
 
-	def backNforth(self, dvx, dvy, dvz, a):
+	# still incorrect
+	def backNforth(self, a, threshold):
 		def back_and_forth(vx, vy, vz):
+			epsilon = 1e-7
+			dvx = vx + (np.sign(vx + epsilon) if threshold > abs(vx) else - np.sign(vx + epsilon)) * a
+			dvy = vy + (np.sign(vy + epsilon) if threshold > abs(vy) else - np.sign(vy + epsilon)) * a
+			dvz = vz + (np.sign(vz + epsilon) if threshold > abs(vz) else - np.sign(vz + epsilon)) * a
 			return (dvx, dvy, dvz)
 		return back_and_forth
 

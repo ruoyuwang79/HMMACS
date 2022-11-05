@@ -106,7 +106,7 @@ if __name__ == "__main__":
 	
 	movable = True
 	# move frequency in sub time slot
-	move_freq = 1 / 50
+	move_freq = 1 / 5
 	# unit in meter, can be any positive real number
 	# the sptial simulator will randomly generate nodes coordinates as
 	# (x, y, z) where x, y, z in [scale * (-0.5, 0.5)]
@@ -114,11 +114,12 @@ if __name__ == "__main__":
 	random_init = False
 	func_helper = track_functions()
 	# max velocity: np.sqrt(3 * 0.5 ** 2) / (sub_slot_length * 1e-9 / move_freq)
-	track = [func_helper.linear(np.random.rand() - 0.5, np.random.rand() - 0.5, np.random.rand() - 0.5) for i in range(n_nodes)]
-	track[0] = func_helper.static()
+	# track = [func_helper.linear(np.random.rand() - 0.5, np.random.rand() - 0.5, np.random.rand() - 0.5) for i in range(n_nodes)]
+	# track[0] = func_helper.static()
+	track = [func_helper.backNforth(0.5, 0.5) for i in range(n_nodes)]
 
 	save_trace = True
-	max_iter = 10000
+	max_iter = 500
 	log_path = '../logs/'
 	config_path = '../configs/'
 	track_path = '../tracks/'

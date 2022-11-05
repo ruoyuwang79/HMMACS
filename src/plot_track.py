@@ -17,12 +17,13 @@ def animate_scatters(iteration, data, scatters):
 	return scatters
 
 # downsampling rate
-downsampling_rate = 20 
+downsampling_rate = 10
 
 # load and manipulate data
 data = np.loadtxt(file_path + file_name + file_suffix, dtype=float)
 data = data.reshape((-1, 3, n_nodes))
 data = data[::downsampling_rate, :, :]
+data = data[(data != 0).all(2).all(1)]
 
 # randomly generate colors
 color = [(np.random.rand(), np.random.rand(), np.random.rand()) for _ in range(n_nodes)]
