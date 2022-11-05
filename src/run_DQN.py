@@ -50,15 +50,15 @@ def main(max_iter, env, agent=None, sim_mode=1):
 # TODO: load saved configurations
 if __name__ == "__main__":
 	n_agents = 1
-	n_others = 1
+	n_others = 2
 	n_nodes = n_agents + n_others # number of nodes
 	# nodes_mask = np.random.randint(1, 5, n_nodes)
 	# nodes_mask = np.array([0, 2, 2, 2, 1, 4, 2, 4, 2, 3], dtype=int)
-	nodes_mask = np.array([0, 2], dtype=int)
+	# nodes_mask = np.array([0, 2], dtype=int)
 	# Xuan's case 1 & 2
 	# nodes_mask = np.array([0, 1, 2], dtype=int)
 	# Xuan's agent-qALOHA coesist
-	# nodes_mask = 2 * np.ones(n_nodes, dtype=int)
+	nodes_mask = 2 * np.ones(n_nodes, dtype=int)
 	# the first one should be the agent
 	nodes_mask[0] = nodes_mask[0] if n_agents == 0 else 0
 	
@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
 	tdma_occupancy = 3
 	tdma_period = 10
-	aloha_prob = 0.2
+	aloha_prob = 0.5
 	window_size = 2
 	max_backoff = 2
 
@@ -104,7 +104,7 @@ if __name__ == "__main__":
 	epsilon_min = 0.01
 	epsilon_decay = 0.995
 	
-	movable = False
+	movable = True
 	# move frequency in sub time slot
 	move_freq = 1 / 50
 	# unit in meter, can be any positive real number

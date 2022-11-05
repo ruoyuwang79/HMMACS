@@ -219,10 +219,9 @@ class ENVIRONMENT(object):
 				 ):
 		super(ENVIRONMENT, self).__init__()
 		# Most important parameters
-		# Ruoyu: Currently, no support for multi-agent, legal value is 0 or 1
+		# Ruoyu: agents are user-defined MAC nodes
 		# if n_agents == 0, it is the pure conventional network simulation
 		self.n_agents = n_agents
-		assert self.n_agents < 2
 		self.n_others = n_others
 		self.n_nodes = self.n_agents + self.n_others
 		assert self.n_nodes < 1024
@@ -411,7 +410,7 @@ class ENVIRONMENT(object):
 			self.transmission_logs[self.trace_counter, :] = Success_trace.sum(0)
 			self.trace_counter += 1
 		
-		return Observations[:, self.nodes_mask == 0].flatten()
+		return Observations[:, self.nodes_mask == 0]
 
 	# sink-agent ENV API
 	# main part in the CHANNEL (sink)

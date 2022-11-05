@@ -95,6 +95,11 @@ class track_functions():
 	def linear(self, dvx, dvy, dvz):
 		return lambda vx, vy, vz: (dvx, dvy, dvz)
 
+	def backNforth(self, dvx, dvy, dvz, a):
+		def back_and_forth(vx, vy, vz):
+			return (dvx, dvy, dvz)
+		return back_and_forth
+
 	def spiral(self, angular_velocity, velocity, dvz):
 		def spiral_func(vx, vy, vz):
 			epsilon = 1e-7
