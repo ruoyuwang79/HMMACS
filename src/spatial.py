@@ -4,7 +4,8 @@ import numpy as np
 class SPATIAL():
 	def __init__(self, n_nodes, track, 
 				 scale=2e3, time_granularity=1e7, 
-				 random_init=True, distance=None,
+				 distance_init=False, distance=None,
+				 random_init=True, x=None, y=None, z=None,
 				 save_trace=False, n_iter=1, file_name=''):
 		# number of source nodes
 		self.n_nodes = n_nodes
@@ -15,12 +16,9 @@ class SPATIAL():
 		self.scale = scale
 		# in nano seconds
 		self.time_granularity = time_granularity
+		self.distance_init = distance_init
 		self.random_init = random_init
-		if self.random_init:
-			self.x = self.scale * (np.random.rand(self.n_nodes) - 0.5)
-			self.y = self.scale * (np.random.rand(self.n_nodes) - 0.5)
-			self.z = self.scale * (np.random.rand(self.n_nodes) - 0.5)
-		else:
+		if self.distance_init:
 			# give distance, randomly pick coordination on the smphere
 			# algorithm based on https://mathworld.wolfram.com/SpherePointPicking.html
 			# algorithm created by Muller 1959 and Marsaglia 1972
@@ -31,6 +29,17 @@ class SPATIAL():
 			self.x = factor * x
 			self.y = factor * y
 			self.z = factor * z
+		elif self.random_init:
+			# randomly generate a cube
+			self.x = self.scale * (np.random.rand(self.n_nodes) - 0.5)
+			self.y = self.scale * (np.random.rand(self.n_nodes) - 0.5)
+			self.z = self.scale * (np.random.rand(self.n_nodes) - 0.5)
+		else:
+			# use the given coordinate
+			self.x = x
+			self.y = y
+			self.z = z
+			
 		self.vx = np.zeros(self.n_nodes, dtype=float)
 		self.vy = np.zeros(self.n_nodes, dtype=float)
 		self.vz = np.zeros(self.n_nodes, dtype=float)
@@ -86,9 +95,25 @@ class SPATIAL():
 			np.savetxt(self.file_name, self.history_positions.reshape((-1, 3 * self.n_nodes)), fmt='%f')
 
 class track_functions():
-	def __init__(self):
+	def __init__(self, sub_slot_length, move_freq):
 		super(track_functions, self).__init__()
+		self.sub_slot_length = sub_slot_length
+		self.move_freq = move_freq
 
+	def m_per_s2per_step(self, vx, vy, vz):
+		vx_norm = vx * (sub_slot_length * 1e-9 / move_freq)
+		vy_norm = vy * (sub_slot_length * 1e-9 / move_freq)
+		vz_norm = vz * (sub_slot_length * 1e-9 / move_freq)
+		return vx_norm, vy_norm, vz_norm
+
+	def m_per_step2per_s(self, vx_norm, vy_norm, vz_norm):
+		vx = vx_norm * (sub_slot_length * 1e-9 / move_freq)
+		vy = vy_norm * (sub_slot_length * 1e-9 / move_freq)
+		vz = vz_norm * (sub_slot_length * 1e-9 / move_freq)
+		return vx, vy, vz
+
+	# all following pre-defined functions v are per step speed
+	# use the converter to translate before passing
 	def static(self):
 		return lambda vx, vy, vz: (0, 0, 0)
 
@@ -113,3 +138,17 @@ class track_functions():
 			dvy = np.sqrt(velocity) * np.cos(new_theta)
 			return dvx, dvy, dvz
 		return spiral_func
+
+	# UW-ALOHA-QM case A
+	def moored(self, min_v, max_v):
+		def randomly_wondering(vx, vy, vz):
+			random_v = np.random.uniform(min_v, max_v)
+			dvx = np.random.randn()
+			dvy = np.random.randn()
+			dvz = np.random.randn()
+			factor = random_v / np.sqrt(dvx ** 2 + dvy ** 2 + dvz ** 2)
+			return (factor * dvx, factor * dvy, factor * dvz)
+		return randomly_wondering
+
+	def floating(self):
+		return lambda vx, vy, vz: return ()

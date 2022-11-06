@@ -282,7 +282,8 @@ class ENVIRONMENT(object):
 				track = [func_helper.static() for i in range(self.n_nodes)]
 			self.spatial = SPATIAL(self.n_nodes, track, scale=self.scale, 
 								   time_granularity=self.sub_slot_length / self.move_freq, 
-								   random_init=self.random_init, distance=self.delay2distance(self.nodes_delay),
+								   distance=self.delay2distance(self.nodes_delay),
+								   random_init=self.random_init, 
 								   save_trace=True, n_iter=n_move, file_name=track_name)
 			new_distribution = self.spatial.get_distance()
 			new_delay = self.distance2delay(new_distribution)
