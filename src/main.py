@@ -50,7 +50,7 @@ def main(max_iter, env, agent=None, sim_mode=1):
 # TODO: load saved configurations / parse config files
 if __name__ == "__main__":
 	n_agents = 0
-	n_others = 4
+	n_others = 6
 	n_nodes = n_agents + n_others # number of nodes
 	# nodes_mask = np.random.randint(1, 5, n_nodes)
 	# nodes_mask = np.array([0, 2, 2, 2, 1, 4, 2, 4, 2, 3], dtype=int)
@@ -110,28 +110,30 @@ if __name__ == "__main__":
 	# mobility parameters
 	movable = True
 	# update position every second
-	time_granularity = 1e8
+	time_granularity = 1e9
 	# move frequency in sub time slot
 	move_freq = 1 / (time_granularity / sub_slot_length)
 
 	# unit in meter, can be any positive real number
 	# the sptial simulator will randomly generate nodes coordinates as
 	# (x, y, z) where x, y, z in [scale * (-0.5, 0.5)]
-	# scale = 2 * 1500 * (delay_max * sub_slot_length * 1e-9)
-	scale = 4
+	scale = 2 * 1500 * (delay_max * sub_slot_length * 1e-9)
 	distance_init = False
 	random_init = True
 	# use the helper to generate track functions
 	func_helper = track_functions(time_granularity)
 	track = []
 	for i in range(n_nodes):
-		# if np.random.rand() < 0.5:
-		if i < 2:
+		dice = np.random.rand()
+		if dice < 0.33:
 			velocity = func_helper.norm2step(func_helper.resultant2component(2))
 			func = func_helper.linear(velocity[0], velocity[1], velocity[2])
-		else:
+		elif 0.33 <= dice < 0.66:
 			velocity = func_helper.norm2step(func_helper.resultant2component(2))
 			func = func_helper.spiral(np.pi / 30 * (time_granularity * 1e-9), velocity[0] ** 2 + velocity[1] ** 2, velocity[2])
+		else:
+			threshold = 3 * time_granularity * 1e-9
+			func = func_helper.backNforth(func_helper.resultant2component(0.3), threshold)
 		track.append(func)
 
 	# saving parameters
@@ -177,15 +179,14 @@ if __name__ == "__main__":
 
 	if movable:
 		spatial = SPATIAL(n_nodes,
-						track,
-						scale = scale,
-						time_granularity = time_granularity,
-						distance_init = distance_init, distance = env.delay2distance(),
-				 		random_init = random_init, x = None, y = None, z = None,
-				 		save_trace = save_track, n_iter = n_iter, 
-						# file_name = track_path + file_prefix + file_name + file_timestamp + log_suffix,
-						file_name = track_path + 'demo.txt'
-						)
+						  track,
+						  scale = scale,
+						  time_granularity = time_granularity,
+						  distance_init = distance_init, distance = env.delay2distance(),
+				 		  random_init = random_init, x = None, y = None, z = None,
+				 		  save_trace = save_track, n_iter = n_iter, 
+						  file_name = track_path + file_prefix + file_name + file_timestamp + log_suffix,
+						  )
 		env.attach_spatial(spatial)
 
 	agent = DQN(state_len,

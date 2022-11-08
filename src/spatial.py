@@ -13,7 +13,7 @@ class SPATIAL():
 		# number of source nodes
 		self.n_nodes = n_nodes
 		# all nodes track function
-		# function is direction of acceleration based on position
+		# track function input is current velocity and acceleration
 		self.track = track
 		# largest coordinate (in meter) to origin (sink)
 		self.scale = scale
@@ -43,10 +43,14 @@ class SPATIAL():
 			self.y = y
 			self.z = z
 		
-		# initialize all nodes static
+		# initialize all nodes velocity static
 		self.vx = np.zeros(self.n_nodes, dtype=float)
 		self.vy = np.zeros(self.n_nodes, dtype=float)
 		self.vz = np.zeros(self.n_nodes, dtype=float)
+		# initialize all nodes acceleration static
+		self.ax = np.zeros(self.n_nodes, dtype=float)
+		self.ay = np.zeros(self.n_nodes, dtype=float)
+		self.az = np.zeros(self.n_nodes, dtype=float)
 
 		self.save_trace = save_trace
 		if self.save_trace:
@@ -68,9 +72,15 @@ class SPATIAL():
 	def get_distance(self):
 		return np.sqrt(self.x**2 + self.y**2 + self.z**2)
 
+	# x = vt, v = v + a
 	# return the new speed
-	def get_v(self):
-		dv = np.array([self.track[i](self.vx[i], self.vy[i], self.vz[i]) for i in range(self.n_nodes)], dtype=float)
+	def update_a(self):
+		dvda = np.array([self.track[i]((self.vx[i], self.vy[i], self.vz[i]), (self.ax[i], self.ay[i], self.az[i])) for i in range(self.n_nodes)], dtype=float)
+		dv = dvda[:, 0, :]
+		da = dvda[:, 1, :]
+		self.ax = da[:, 0]
+		self.ay = da[:, 1]
+		self.az = da[:, 2]
 		return (dv[:, 0], dv[:, 1], dv[:, 2])
 
 	# use the new speed to replace the original
@@ -80,16 +90,16 @@ class SPATIAL():
 		self.vz = dvz
 
 	# velocity in m/s, time granularity in ns, distance in m
-	def update_position(self):
+	def update_x(self):
 		self.x += self.vx * self.time_granularity * 1e-9
 		self.y += self.vy * self.time_granularity * 1e-9
 		self.z += self.vz * self.time_granularity * 1e-9
 
 	# API for environment (after attach, env will call this)
 	def step(self):
-		dvx, dvy, dvz = self.get_v()
+		dvx, dvy, dvz = self.update_a()
 		self.update_v(dvx, dvy, dvz)
-		self.update_position()
+		self.update_x()
 		if self.save_trace:
 			self.history_positions[self.step_counter, 0, :] = self.x
 			self.history_positions[self.step_counter, 1, :] = self.y
@@ -110,6 +120,7 @@ class track_functions():
 		self.time_granularity = time_granularity
 
 	# randomly decompose a resultant velocity
+	# functionality: uniformly pick a random direction
 	def resultant2component(self, resultant):
 		dvx = np.random.randn()
 		dvy = np.random.randn()
@@ -132,34 +143,39 @@ class track_functions():
 		return (vx, vy, vz)
 
 	def static(self):
-		return lambda vx, vy, vz: (0, 0, 0)
+		return lambda v, a: ((0, 0, 0), (0, 0, 0))
 
 	def linear(self, dvx, dvy, dvz):
-		return lambda vx, vy, vz: (dvx, dvy, dvz)
+		return lambda v, a: ((dvx, dvy, dvz), (0, 0, 0))
 
 	def spiral(self, angular_velocity, velocity, dvz):
-		def spiral_func(vx, vy, vz):
+		def spiral_func(v, a):
 			epsilon = 1e-7
-			new_theta = np.arctan(vx / (vy + epsilon)) + angular_velocity + (np.pi if vy < 0 else 0)
+			new_theta = np.arctan(v[0] / (v[1] + epsilon)) + angular_velocity + (np.pi if v[1] < 0 else 0)
 			dvx = np.sqrt(velocity) * np.sin(new_theta)
 			dvy = np.sqrt(velocity) * np.cos(new_theta)
-			return (dvx, dvy, dvz)
+			return ((dvx, dvy, dvz), (0, 0, 0))
 		return spiral_func
 	
-	### used to reproduce, developing ###
-	# still incorrect
-	def backNforth(self, a, threshold):
-		def back_and_forth(vx, vy, vz):
-			epsilon = 1e-7
-			dvx = vx + (np.sign(vx + epsilon) if threshold > abs(vx) else - np.sign(vx + epsilon)) * a
-			dvy = vy + (np.sign(vy + epsilon) if threshold > abs(vy) else - np.sign(vy + epsilon)) * a
-			dvz = vz + (np.sign(vz + epsilon) if threshold > abs(vz) else - np.sign(vz + epsilon)) * a
-			return (dvx, dvy, dvz)
+	def backNforth(self, acceleration, threshold):
+		def back_and_forth(v, a):
+			ax = a[0] if a[0] != 0 else acceleration[0]
+			ay = a[1] if a[1] != 0 else acceleration[1]
+			az = a[2] if a[2] != 0 else acceleration[2]
+			if (v[0] ** 2 + v[1] ** 2 + v[2] ** 2) >= threshold ** 2:
+				ax *= -1
+				ay *= -1
+				az *= -1
+			dvx = v[0] + ax
+			dvy = v[1] + ay
+			dvz = v[2] + az
+			return ((dvx, dvy, dvz), (ax, ay, az))
 		return back_and_forth
 
+	### used to reproduce, developing ###
 	# UW-ALOHA-QM case A
 	def moored(self, min_v, max_v):
-		return lambda vx, vy, vz: self.resultant2component(np.random.uniform(min_v, max_v))
+		return lambda v, z: (self.resultant2component(np.random.uniform(min_v, max_v)), (0, 0, 0))
 
 	def floating(self):
-		return lambda vx, vy, vz: (0, 0, 0)
+		return lambda v, a: ((0, 0, 0), (0, 0, 0))
