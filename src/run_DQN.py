@@ -47,9 +47,9 @@ def main(max_iter, env, agent=None, sim_mode=1):
 # 3     | ERROR            | Filter out all messages   
 
 # set running configurations here
-# TODO: load saved configurations
+# TODO: load saved configurations / parse config files
 if __name__ == "__main__":
-	n_agents = 1
+	n_agents = 0
 	n_others = 2
 	n_nodes = n_agents + n_others # number of nodes
 	# nodes_mask = np.random.randint(1, 5, n_nodes)
@@ -67,18 +67,21 @@ if __name__ == "__main__":
 	# 1e7 * 1e-9 s
 	sub_slot_length = 1e7
 
+	# in # of time slot
+	frame_length = 10
 	tdma_occupancy = 3
-	tdma_period = 10
 	aloha_prob = 0.5
 	window_size = 2
 	max_backoff = 2
 
+	# known bug: env_mode = 0 does not work
 	env_mode = 1
 	env_mac_mode = 1
 	agent_mac_mode = 1
 	sink_mode = 0
 	reward_polarity = False
 
+	# UAN delay configurations
 	delay_max = 100
 	# mask used for hybrid network
 	# Xuan's case 1
@@ -89,7 +92,7 @@ if __name__ == "__main__":
 	# delay = np.random.randint(1, 83, n_nodes)
 	# Ruoyu's mobility test
 	delay = np.random.randint(1, delay_max, n_nodes)
-	num_sub_slot = 20
+	num_sub_slot = 1 if env_mode == 0 else 20
 
 	state_len = 20 # state length (in # of time slots)
 	memory_size = 1000 # memory size (in # of states)
@@ -104,21 +107,25 @@ if __name__ == "__main__":
 	epsilon_min = 0.01
 	epsilon_decay = 0.995
 	
-	movable = True
+	# mobility parameters
+	movable = False
+	# update position every second
+	time_granularity = 1e9
 	# move frequency in sub time slot
-	move_freq = 1 / 5
+	move_freq = 1 / (time_granularity / sub_slot_length)
 	# unit in meter, can be any positive real number
 	# the sptial simulator will randomly generate nodes coordinates as
 	# (x, y, z) where x, y, z in [scale * (-0.5, 0.5)]
 	scale = 2 * 1500 * (delay_max * sub_slot_length * 1e-9)
 	random_init = False
-	func_helper = track_functions()
+	func_helper = track_functions(sub_slot_length, move_freq)
 	# max velocity: np.sqrt(3 * 0.5 ** 2) / (sub_slot_length * 1e-9 / move_freq)
 	# track = [func_helper.linear(np.random.rand() - 0.5, np.random.rand() - 0.5, np.random.rand() - 0.5) for i in range(n_nodes)]
 	# track[0] = func_helper.static()
 	track = [func_helper.backNforth(0.5, 0.5) for i in range(n_nodes)]
 
-	save_trace = True
+	# saving parameters
+	save_trace = False
 	max_iter = 500
 	log_path = '../logs/'
 	config_path = '../configs/'
@@ -138,8 +145,8 @@ if __name__ == "__main__":
 					  packet_length=packet_length,
 				 	  guard_length=guard_length,
 					  sub_slot_length=sub_slot_length,
+					  frame_length = frame_length,
 					  tdma_occupancy = tdma_occupancy,
-					  tdma_period = tdma_period,
 					  aloha_prob = aloha_prob,
 					  window_size = window_size,
 					  max_backoff = max_backoff,
@@ -150,15 +157,19 @@ if __name__ == "__main__":
 					  num_sub_slot = num_sub_slot,
 					  movable = movable,
 					  move_freq = move_freq,
-					  scale = scale,
-					  random_init = random_init,
-					  track = track,
 					  save_trace = save_trace,
 					  n_iter = max_iter,
 					  log_name = log_path + file_prefix + file_name + file_timestamp + log_suffix,
 					  config_name = config_path + file_prefix + file_name + file_timestamp + config_suffix,
-				 	  track_name = track_path + file_prefix + file_name + file_timestamp + log_suffix,
-					 )
+					  )
+
+	if movable:
+		spatial = SPATIAL(n_nodes,
+						track,
+						scale = scale,
+						time_granularity = time_granularity,
+						)
+		env.attach_spatial(spatial)
 
 	agent = DQN(state_len,
 				n_nodes,
@@ -179,6 +190,6 @@ if __name__ == "__main__":
 				penalty_factor = penalty_factor,
 				save_trace = save_trace,
 				config_name = config_path + file_prefix + file_name + file_timestamp + config_suffix,
-			   )
+				)
 
 	main(max_iter, env, agent, n_agents)

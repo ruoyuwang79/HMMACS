@@ -1,5 +1,6 @@
-logs/
 configs/
+figs/
+logs/
 tracks/
 src/__pycache__/
 .DS_Store

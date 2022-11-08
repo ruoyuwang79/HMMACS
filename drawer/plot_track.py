@@ -23,7 +23,6 @@ downsampling_rate = 10
 data = np.loadtxt(file_path + file_name + file_suffix, dtype=float)
 data = data.reshape((-1, 3, n_nodes))
 data = data[::downsampling_rate, :, :]
-data = data[(data != 0).all(2).all(1)]
 
 # randomly generate colors
 color = [(np.random.rand(), np.random.rand(), np.random.rand()) for _ in range(n_nodes)]

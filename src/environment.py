@@ -1,10 +1,9 @@
 import numpy as np 
-from spatial import SPATIAL, track_functions
 
 # Optimized for performance
 # Note: not multi-thread safe
 class DELAY_QUEUE(object):
-	def __init__(self, delay, reserve=2):
+	def __init__(self, delay: int, reserve: int = 2):
 		super(DELAY_QUEUE, self).__init__()
 		self.delay = delay if delay > 0 else 1
 		self.n_transmission = 0
@@ -17,7 +16,7 @@ class DELAY_QUEUE(object):
 	# if the previous transmitted packet longer than the gap between two transmissions
 	# un-expectable behavior may happen
 	# time spent is maintained by countdown
-	def push(self, length, packet_data):
+	def push(self, length: int, packet_data: int):
 		# lack of space, enlarge
 		if self.delay_channel.size <= self.n_transmission + 1:
 			# double the size each time
@@ -67,7 +66,7 @@ class DELAY_QUEUE(object):
 		return 0, -1
 	
 	# API for mobility update
-	def update_delay(self, new_delay):
+	def update_delay(self, new_delay: int):
 		self.delay = new_delay if new_delay > 0 else 1
 
 	# API between CHANNEL and DELAY_QUEUE
@@ -82,7 +81,7 @@ class DELAY_QUEUE(object):
 	#       if 0 was set, cannot distinguish the difference between packet length 1 and 2
 	# Note: the model can be treated as pushing at the begining edge of the time slot
 	#       poping at the finishing edge of the time slot
-	def step(self, length=1, packet_data=-1):
+	def step(self, length: int = 1, packet_data: int = -1):
 		# only packet length larger than 0 means a transmit
 		if length > 0:
 			self.push(length, packet_data)
@@ -91,7 +90,7 @@ class DELAY_QUEUE(object):
 
 # collection of all-nodes full-duplex channels
 class CHANNEL(object):
-	def __init__(self, n_nodes, delay):
+	def __init__(self, n_nodes: int, delay: np.array):
 		super(CHANNEL, self).__init__()
 		# number of nodes of the system
 		self.n_nodes = n_nodes
@@ -122,7 +121,7 @@ class CHANNEL(object):
 	
 	# API for mobility update
 	# It is inefficient becuase the organization of delay queues
-	def update_delay(self, new_delays):
+	def update_delay(self, new_delays: np.array):
 		for i in range(self.n_nodes):
 			self.src2sink_delay_channels[i].update_delay(new_delays[i])
 			self.sink2src_delay_channels[i].update_delay(new_delays[i])
@@ -132,7 +131,7 @@ class CHANNEL(object):
 	# Return: Observation-the broadcast contents recieved for all source nodes
 	#         Because different nodes has different delay, their observations are different
 	# Note: The rewards is based on the observation, it is the responsibility of nodes
-	def step(self, actions, packet_length=1):
+	def step(self, actions: np.array, packet_length: int = 1):
 		uplink_channel_output = np.array([self.src2sink_delay_channels[i].step(actions[i] * packet_length)[0] for i in range(self.n_nodes)], dtype=int)
 		# in a time slot, the observation to send is the same
 		# but delay are different, so different nodes can see different obs
@@ -173,7 +172,7 @@ class CHANNEL(object):
 	# Return: Observation-output of uplinks (target, always only one +-1)
 	#         src_instruction-source nodes listened contents
 	# Note: The rewards is based on the observation, agents calculate by themselves
-	def cycle(self, actions, broadcast, packet_length=1):
+	def cycle(self, actions: np.array, broadcast: np.array, packet_length: int = 1):
 		Observations = np.array([self.src2sink_delay_channels[i].step(actions[i] * packet_length)[0] for i in range(self.n_nodes)], dtype=int)
 		abs_obs = np.abs(Observations)
 		src_instruction = np.array([i.step(1, broadcast)[1] for i in self.sink2src_delay_channels], dtype=int)
@@ -190,32 +189,28 @@ class CHANNEL(object):
 # Normal nodes decision making simulation
 class ENVIRONMENT(object):
 	def __init__(self,
-				 n_agents,
-				 n_others,
-				 nodes_mask,
-				 packet_length=1,
-				 guard_length=1,
-				 sub_slot_length=1e7,
-				 tdma_occupancy = 2,
-				 tdma_period = 10,
-				 aloha_prob = 0.2,
-				 window_size = 2,
-				 max_backoff = 2,
-				 env_mode = 0,
-				 mac_mode = 0,
-				 sink_mode = 0,
-				 nodes_delay = None,
-				 num_sub_slot = 1,
-				 movable = False,
-				 move_freq = 0,
-				 scale = 2e3,
-				 random_init = True,
-				 track = None,
-				 save_trace = False,
-				 n_iter = 1000,
-				 log_name = '',
-				 config_name = '',
-				 track_name = '',
+				 n_agents: int,
+				 n_others: int,
+				 nodes_mask: np.array,
+				 packet_length: int = 1,
+				 guard_length: int = 1,
+				 sub_slot_length: int = 1e7,
+				 frame_length: int = 10,
+				 tdma_occupancy: int = 2,
+				 aloha_prob: float = 0.2,
+				 window_size: int = 2,
+				 max_backoff: int = 2,
+				 env_mode: int = 0,
+				 mac_mode: int = 0,
+				 sink_mode: int = 0,
+				 nodes_delay: np.array = None,
+				 num_sub_slot: int = 1,
+				 movable: bool = False,
+				 move_freq: float = 0,
+				 save_trace: bool = False,
+				 n_iter: int = 1000,
+				 log_name: str = '',
+				 config_name: str = '',
 				 ):
 		super(ENVIRONMENT, self).__init__()
 		# Most important parameters
@@ -229,26 +224,7 @@ class ENVIRONMENT(object):
 		# 0-agent, 1-TDMA, 2-qALOHA, 3-FW_ALOHA, 4-EB_ALOHA
 		self.nodes_mask = nodes_mask
 		assert self.nodes_mask.size == self.n_nodes
-		self.packet_length = packet_length
-		self.guard_length = guard_length
-		self.sending_counter = np.zeros(self.n_nodes, dtype=int)
-		# sub time slot length, unit in nano second (10^-9 s)
-		# default 0.01 s
-		self.sub_slot_length = sub_slot_length
-
-		# conventional nodes decision making parameters
-		self.node_actions = np.zeros(self.n_nodes, dtype=int)
-		self.tdma_period = tdma_period
-		self.tdma_occupancy = tdma_occupancy
-		self.tdma = np.zeros(self.tdma_period, dtype=int)
-		self.tdma[np.random.choice(self.tdma_period, self.tdma_occupancy)] = 1
-		self.tdma_counter = 0
-		self.aloha_prob = aloha_prob
-		self.window_size = window_size
-		self.max_backoff = max_backoff
-		self.eb_collision_count = np.zeros(self.n_nodes, dtype=int) 
-		self.window = np.random.randint(0, self.window_size * 2**self.eb_collision_count, dtype=int)
-
+		
 		# Ruoyu: simulation modes selection
 		# env_mode 0: RF, env_mode others: UAN
 		self.env_mode = env_mode
@@ -256,6 +232,29 @@ class ENVIRONMENT(object):
 		self.mac_mode = mac_mode
 		# sink_mode 0: src-agent, sink_mode other: sink-agent
 		self.sink_mode = sink_mode
+
+		self.packet_length = 0 if self.env_mode == 0 else packet_length
+		self.guard_length = 0 if self.env_mode == 0 else guard_length
+		self.sending_counter = np.zeros(self.n_nodes, dtype=int)
+		# sub time slot length, unit in nano second (10^-9 s)
+		# default 0.01 s
+		self.sub_slot_length = sub_slot_length
+
+		# conventional nodes decision making parameters
+		self.node_actions = np.zeros(self.n_nodes, dtype=int)
+		self.frame_length = frame_length
+		self.tdma_occupancy = tdma_occupancy
+		self.tdma = np.zeros(self.frame_length, dtype=int)
+		self.tdma[np.random.choice(self.frame_length, self.tdma_occupancy)] = 1
+		self.tdma_counter = 0
+		self.aloha_prob = aloha_prob
+		self.window_size = window_size
+		self.max_backoff = max_backoff
+		self.eb_collision_count = np.zeros(self.n_nodes, dtype=int) 
+		self.window = np.random.randint(0, self.window_size * 2**self.eb_collision_count, dtype=int)
+
+		# based on simulation mode, use different step function to ensure the APIs are the same
+		self.step = self.source_agent if self.sink_mode == 0 else self.sink_agent
 		# delay is the propagation delay measured by number of sub time slots 
 		self.nodes_delay = np.ones(self.n_nodes, dtype=int) if self.env_mode == 0 else nodes_delay
 		assert self.nodes_delay.size == self.n_nodes
@@ -265,30 +264,11 @@ class ENVIRONMENT(object):
 
 		self.previous_action = np.zeros(self.num_sub_slot, dtype=int)
 
-		# mobility update
-		# mobility configurations
-		# Notice: once enable the movable, the delay will be untrackable
+		# mobile simulator need to be initlized outside
 		self.movable = movable
 		if self.movable:
 			self.move_freq = move_freq
-			self.scale = scale
-			self.random_init = random_init
-			self.move_counter = 0
-
-			# set up the mobility simulator
-			n_move = int((n_iter * self.num_sub_slot + self.n_padding) * self.move_freq) +  + 1
-			if track == None:
-				func_helper = track_functions()
-				track = [func_helper.static() for i in range(self.n_nodes)]
-			self.spatial = SPATIAL(self.n_nodes, track, scale=self.scale, 
-								   time_granularity=self.sub_slot_length / self.move_freq, 
-								   distance=self.delay2distance(self.nodes_delay),
-								   random_init=self.random_init, 
-								   save_trace=True, n_iter=n_move, file_name=track_name)
-			new_distribution = self.spatial.get_distance()
-			new_delay = self.distance2delay(new_distribution)
-			self.update_delay(new_delay)
-
+			
 		# Ruoyu: Track the system throughput is the environment responsibility
 		# it has large overhead of memory, but we need that data
 		self.save_trace = save_trace
@@ -300,10 +280,18 @@ class ENVIRONMENT(object):
 			# the addtional rows are for the drain reward
 			self.transmission_logs = np.zeros((self.n_iter + 1, self.n_nodes), dtype=int)
 
+	# attach the mobile simulator
+	def attach_spatial(self, spatial):
+		self.spatial = spatial
+		self.move_counter = 0
+		new_distribution = self.spatial.get_distance()
+		new_delay = self.distance2delay(new_distribution)
+		self.update_delay(new_delay)
+
 	def reset(self):
 		self.node_actions = np.zeros(self.n_nodes, dtype=int)
-		self.tdma = np.zeros(self.tdma_period, dtype=int)
-		self.tdma[np.random.choice(self.tdma_period, self.tdma_occupancy)] = 1
+		self.tdma = np.zeros(self.frame_length, dtype=int)
+		self.tdma[np.random.choice(self.frame_length, self.tdma_occupancy)] = 1
 		self.tdma_counter = 0
 		self.eb_collision_count = np.zeros(self.n_nodes, dtype=int) 
 		self.window = np.random.randint(0, self.window_size * 2**self.eb_collision_count, dtype=int)
@@ -335,7 +323,7 @@ class ENVIRONMENT(object):
 	# this function will update all internal counters
 	def update_counters(self):
 		# update tdma period counter
-		self.tdma_counter = (self.tdma_counter + 1) % self.tdma_period
+		self.tdma_counter = (self.tdma_counter + 1) % self.frame_length
 		self.window -= 1
 		self.eb_collision_count = np.minimum(self.eb_collision_count, self.max_backoff)
 		self.window[self.window < 0] = np.random.randint(0, self.window_size * 2**self.eb_collision_count)[self.window < 0]
@@ -371,7 +359,7 @@ class ENVIRONMENT(object):
 	# src-agent ENV API
 	# there is no more than 1 agents, the action is an integer
 	# this function is compatible to non-agent simulation
-	def step(self, action=0):
+	def source_agent(self, action=0):
 		# get the action of this time slot
 		self.get_actions()
 		self.node_actions[self.nodes_mask == 0] = action
@@ -419,7 +407,7 @@ class ENVIRONMENT(object):
 	# dimensions: action: # sub * 1
 	#             obs: # sub * n_nodes
 	#             rewards: 1 * n_nodes
-	def cycle(self, broadcast):
+	def sink_agent(self, broadcast):
 		Observations = np.zeros((self.num_sub_slot, self.n_nodes), dtype=int)
 		Success_trace = np.zeros((self.num_sub_slot, self.n_nodes), dtype=int)
 		nodes_idx = np.array([i for i in range(self.n_nodes)], dtype=int)
@@ -469,11 +457,11 @@ class ENVIRONMENT(object):
 		if self.save_trace:
 			self.transmission_logs[self.trace_counter, :] = Success_trace.sum(0)
 			self.trace_counter += 1
-			np.savetxt(self.log_name, self.transmission_logs, fmt='%d')
+			np.savetxt(self.log_name, self.transmission_logs[:self.trace_counter, :], fmt='%d')
 			with open(self.config_name, 'a') as f:
-				config_list = ['n_agents', 'n_others', 'nodes_mask', 'packet_length', 'guard_length', 'tdma_occupancy', 'tdma_period', 
+				config_list = ['n_agents', 'n_others', 'nodes_mask', 'packet_length', 'guard_length', 'frame_length', 'tdma_occupancy', 
 							   'tdma', 'aloha_prob', 'window_size', 'max_backoff', 'env_mode', 'mac_mode', 'sink_mode',
-							   'nodes_delay', 'num_sub_slot', 'movable', 'mobility', 'move_freq']
+							   'nodes_delay', 'num_sub_slot', 'movable', 'move_freq']
 				f.write('\n======= ENVIRONMENT =======\n')
 				f.write('\n'.join([f'{config_key}: {self.__dict__[config_key]}' for config_key in config_list if config_key in self.__dict__]))
 				f.write('\n')

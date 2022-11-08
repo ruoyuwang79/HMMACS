@@ -1,12 +1,15 @@
 import numpy as np
 
 # to maximize the efficiency, once initlized, cannot add new nodes
+# just simulate given configuration
+# different scenarios should be designed outside
+# e.g. surface sensors: initlize z = np.zeros, track has no vz
 class SPATIAL():
-	def __init__(self, n_nodes, track, 
-				 scale=2e3, time_granularity=1e7, 
-				 distance_init=False, distance=None,
-				 random_init=True, x=None, y=None, z=None,
-				 save_trace=False, n_iter=1, file_name=''):
+	def __init__(self, n_nodes: int, track: list, 
+				 scale: int = 2e3, time_granularity: int = 1e7, 
+				 distance_init: bool = False, distance: np.array = None,
+				 random_init: bool = True, x: np.array = None, y: np.array = None, z: np.array = None,
+				 save_trace: bool = False, n_iter: int = 1, file_name: str = ''):
 		# number of source nodes
 		self.n_nodes = n_nodes
 		# all nodes track function
@@ -39,7 +42,8 @@ class SPATIAL():
 			self.x = x
 			self.y = y
 			self.z = z
-			
+		
+		# initialize all nodes static
 		self.vx = np.zeros(self.n_nodes, dtype=float)
 		self.vy = np.zeros(self.n_nodes, dtype=float)
 		self.vz = np.zeros(self.n_nodes, dtype=float)
@@ -53,7 +57,7 @@ class SPATIAL():
 			self.history_positions[self.step_counter, 0, :] = self.x
 			self.history_positions[self.step_counter, 1, :] = self.y
 			self.history_positions[self.step_counter, 2, :] = self.z
-
+			self.step_counter += 1
 
 	def __getitem__(self, idx):
 		return (self.x[idx], self.y[idx], self.z[idx])
@@ -85,14 +89,14 @@ class SPATIAL():
 		dvx, dvy, dvz = self.get_v()
 		self.update_v(dvx, dvy, dvz)
 		self.update_position()
-		self.step_counter += 1
 		self.history_positions[self.step_counter, 0, :] = self.x
 		self.history_positions[self.step_counter, 1, :] = self.y
 		self.history_positions[self.step_counter, 2, :] = self.z
+		self.step_counter += 1
 
 	def finalize(self):
 		if self.save_trace:
-			np.savetxt(self.file_name, self.history_positions.reshape((-1, 3 * self.n_nodes)), fmt='%f')
+			np.savetxt(self.file_name, self.history_positions[:self.step_counter, :, :].reshape((-1, 3 * self.n_nodes)), fmt='%f')
 
 class track_functions():
 	def __init__(self, sub_slot_length, move_freq):
@@ -151,4 +155,4 @@ class track_functions():
 		return randomly_wondering
 
 	def floating(self):
-		return lambda vx, vy, vz: return ()
+		return lambda vx, vy, vz: (0, 0, 0)
