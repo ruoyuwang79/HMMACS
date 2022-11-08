@@ -24,7 +24,7 @@
 
 - Demo
 
-  ![test](figs\test.gif)
+  ![demo](https://github.com/AliceEva/RDLMA/blob/main/figs/demo.gif)
 
 ## Note
 

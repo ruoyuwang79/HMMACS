@@ -8,6 +8,7 @@ file_name = input('Please type in the track file name (no path, no suffix): ')
 fig_suffix = '.gif'
 file_suffix = '.txt'
 
+n_nodes = 4
 for i in file_name.split('_'):
     if 'N' in i:
         n_nodes = int(i[1:])
@@ -17,7 +18,7 @@ def animate_scatters(iteration, data, scatters):
 	return scatters
 
 # downsampling rate
-downsampling_rate = 10
+downsampling_rate = 5
 
 # load and manipulate data
 data = np.loadtxt(file_path + file_name + file_suffix, dtype=float)

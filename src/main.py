@@ -110,21 +110,23 @@ if __name__ == "__main__":
 	# mobility parameters
 	movable = True
 	# update position every second
-	time_granularity = 1e9
+	time_granularity = 1e8
 	# move frequency in sub time slot
 	move_freq = 1 / (time_granularity / sub_slot_length)
 
 	# unit in meter, can be any positive real number
 	# the sptial simulator will randomly generate nodes coordinates as
 	# (x, y, z) where x, y, z in [scale * (-0.5, 0.5)]
-	scale = 2 * 1500 * (delay_max * sub_slot_length * 1e-9)
+	# scale = 2 * 1500 * (delay_max * sub_slot_length * 1e-9)
+	scale = 4
 	distance_init = False
 	random_init = True
 	# use the helper to generate track functions
 	func_helper = track_functions(time_granularity)
 	track = []
 	for i in range(n_nodes):
-		if np.random.rand() < 0.5:
+		# if np.random.rand() < 0.5:
+		if i < 2:
 			velocity = func_helper.norm2step(func_helper.resultant2component(2))
 			func = func_helper.linear(velocity[0], velocity[1], velocity[2])
 		else:
@@ -181,7 +183,8 @@ if __name__ == "__main__":
 						distance_init = distance_init, distance = env.delay2distance(),
 				 		random_init = random_init, x = None, y = None, z = None,
 				 		save_trace = save_track, n_iter = n_iter, 
-						file_name = track_path + file_prefix + file_name + file_timestamp + log_suffix,
+						# file_name = track_path + file_prefix + file_name + file_timestamp + log_suffix,
+						file_name = track_path + 'demo.txt'
 						)
 		env.attach_spatial(spatial)
 
