@@ -17,7 +17,7 @@ class SPATIAL():
 		self.track = track
 		# largest coordinate (in meter) to origin (sink)
 		self.scale = scale
-		# in nano seconds
+		# in nano seconds (1e-9 s)
 		self.time_granularity = time_granularity
 		self.distance_init = distance_init
 		self.random_init = random_init
@@ -63,7 +63,7 @@ class SPATIAL():
 		return (self.x[idx], self.y[idx], self.z[idx])
 
 	def get_all_position(self):
-		return self.x, self.y, self.z
+		return (self.x, self.y, self.z)
 
 	def get_distance(self):
 		return np.sqrt(self.x**2 + self.y**2 + self.z**2)
@@ -71,7 +71,7 @@ class SPATIAL():
 	# return the new speed
 	def get_v(self):
 		dv = np.array([self.track[i](self.vx[i], self.vy[i], self.vz[i]) for i in range(self.n_nodes)], dtype=float)
-		return dv[:, 0], dv[:, 1], dv[:, 2]
+		return (dv[:, 0], dv[:, 1], dv[:, 2])
 
 	# use the new speed to replace the original
 	def update_v(self, dvx, dvy, dvz):
@@ -85,45 +85,68 @@ class SPATIAL():
 		self.y += self.vy * self.time_granularity * 1e-9
 		self.z += self.vz * self.time_granularity * 1e-9
 
+	# API for environment (after attach, env will call this)
 	def step(self):
 		dvx, dvy, dvz = self.get_v()
 		self.update_v(dvx, dvy, dvz)
 		self.update_position()
-		self.history_positions[self.step_counter, 0, :] = self.x
-		self.history_positions[self.step_counter, 1, :] = self.y
-		self.history_positions[self.step_counter, 2, :] = self.z
-		self.step_counter += 1
+		if self.save_trace:
+			self.history_positions[self.step_counter, 0, :] = self.x
+			self.history_positions[self.step_counter, 1, :] = self.y
+			self.history_positions[self.step_counter, 2, :] = self.z
+			self.step_counter += 1
 
+	# API for environment (after attach, env will call this at the end)
 	def finalize(self):
 		if self.save_trace:
+			# cut off all zero tails and store trace
 			np.savetxt(self.file_name, self.history_positions[:self.step_counter, :, :].reshape((-1, 3 * self.n_nodes)), fmt='%f')
 
 class track_functions():
-	def __init__(self, sub_slot_length, move_freq):
+	# all velocity in pre-defined functions are per step
+	# use the converter to translate before generate
+	def __init__(self, time_granularity: int = 1e7,):
 		super(track_functions, self).__init__()
-		self.sub_slot_length = sub_slot_length
-		self.move_freq = move_freq
+		self.time_granularity = time_granularity
 
-	def m_per_s2per_step(self, vx, vy, vz):
-		vx_norm = vx * (sub_slot_length * 1e-9 / move_freq)
-		vy_norm = vy * (sub_slot_length * 1e-9 / move_freq)
-		vz_norm = vz * (sub_slot_length * 1e-9 / move_freq)
-		return vx_norm, vy_norm, vz_norm
+	# randomly decompose a resultant velocity
+	def resultant2component(self, resultant):
+		dvx = np.random.randn()
+		dvy = np.random.randn()
+		dvz = np.random.randn()
+		factor = resultant / np.sqrt(dvx ** 2 + dvy ** 2 + dvz ** 2)
+		return (factor * dvx, factor * dvy, factor * dvz)
 
-	def m_per_step2per_s(self, vx_norm, vy_norm, vz_norm):
-		vx = vx_norm * (sub_slot_length * 1e-9 / move_freq)
-		vy = vy_norm * (sub_slot_length * 1e-9 / move_freq)
-		vz = vz_norm * (sub_slot_length * 1e-9 / move_freq)
-		return vx, vy, vz
+	# from step velocity (m / step) to normalized (m / s)
+	def step2norm(self, velocity):
+		vx_norm = velocity[0] / (self.time_granularity * 1e-9)
+		vy_norm = velocity[1] / (self.time_granularity * 1e-9)
+		vz_norm = velocity[1] / (self.time_granularity * 1e-9)
+		return (vx_norm, vy_norm, vz_norm)
 
-	# all following pre-defined functions v are per step speed
-	# use the converter to translate before passing
+	# from normalized (m / s) to step velocity (m / step)
+	def norm2step(self, velocity_norm):
+		vx = velocity_norm[0] * (self.time_granularity * 1e-9)
+		vy = velocity_norm[1] * (self.time_granularity * 1e-9)
+		vz = velocity_norm[2] * (self.time_granularity * 1e-9)
+		return (vx, vy, vz)
+
 	def static(self):
 		return lambda vx, vy, vz: (0, 0, 0)
 
 	def linear(self, dvx, dvy, dvz):
 		return lambda vx, vy, vz: (dvx, dvy, dvz)
 
+	def spiral(self, angular_velocity, velocity, dvz):
+		def spiral_func(vx, vy, vz):
+			epsilon = 1e-7
+			new_theta = np.arctan(vx / (vy + epsilon)) + angular_velocity + (np.pi if vy < 0 else 0)
+			dvx = np.sqrt(velocity) * np.sin(new_theta)
+			dvy = np.sqrt(velocity) * np.cos(new_theta)
+			return (dvx, dvy, dvz)
+		return spiral_func
+	
+	### used to reproduce, developing ###
 	# still incorrect
 	def backNforth(self, a, threshold):
 		def back_and_forth(vx, vy, vz):
@@ -134,25 +157,9 @@ class track_functions():
 			return (dvx, dvy, dvz)
 		return back_and_forth
 
-	def spiral(self, angular_velocity, velocity, dvz):
-		def spiral_func(vx, vy, vz):
-			epsilon = 1e-7
-			new_theta = np.arctan(vx / (vy + epsilon)) + angular_velocity + (np.pi if vy < 0 else 0)
-			dvx = np.sqrt(velocity) * np.sin(new_theta)
-			dvy = np.sqrt(velocity) * np.cos(new_theta)
-			return dvx, dvy, dvz
-		return spiral_func
-
 	# UW-ALOHA-QM case A
 	def moored(self, min_v, max_v):
-		def randomly_wondering(vx, vy, vz):
-			random_v = np.random.uniform(min_v, max_v)
-			dvx = np.random.randn()
-			dvy = np.random.randn()
-			dvz = np.random.randn()
-			factor = random_v / np.sqrt(dvx ** 2 + dvy ** 2 + dvz ** 2)
-			return (factor * dvx, factor * dvy, factor * dvz)
-		return randomly_wondering
+		return lambda vx, vy, vz: self.resultant2component(np.random.uniform(min_v, max_v))
 
 	def floating(self):
 		return lambda vx, vy, vz: (0, 0, 0)

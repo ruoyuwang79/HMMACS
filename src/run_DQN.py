@@ -5,7 +5,7 @@ from time import time
 
 from environment import ENVIRONMENT
 from DQN_brain import DQN
-from spatial import track_functions
+from spatial import SPATIAL, track_functions
 
 def main(max_iter, env, agent=None, sim_mode=1):
 	# other hyper parameters
@@ -50,7 +50,7 @@ def main(max_iter, env, agent=None, sim_mode=1):
 # TODO: load saved configurations / parse config files
 if __name__ == "__main__":
 	n_agents = 0
-	n_others = 2
+	n_others = 4
 	n_nodes = n_agents + n_others # number of nodes
 	# nodes_mask = np.random.randint(1, 5, n_nodes)
 	# nodes_mask = np.array([0, 2, 2, 2, 1, 4, 2, 4, 2, 3], dtype=int)
@@ -74,7 +74,7 @@ if __name__ == "__main__":
 	window_size = 2
 	max_backoff = 2
 
-	# known bug: env_mode = 0 does not work
+	# TODO: known bug: env_mode = 0 does not work
 	env_mode = 1
 	env_mac_mode = 1
 	agent_mac_mode = 1
@@ -108,25 +108,35 @@ if __name__ == "__main__":
 	epsilon_decay = 0.995
 	
 	# mobility parameters
-	movable = False
+	movable = True
 	# update position every second
 	time_granularity = 1e9
 	# move frequency in sub time slot
 	move_freq = 1 / (time_granularity / sub_slot_length)
+
 	# unit in meter, can be any positive real number
 	# the sptial simulator will randomly generate nodes coordinates as
 	# (x, y, z) where x, y, z in [scale * (-0.5, 0.5)]
 	scale = 2 * 1500 * (delay_max * sub_slot_length * 1e-9)
-	random_init = False
-	func_helper = track_functions(sub_slot_length, move_freq)
-	# max velocity: np.sqrt(3 * 0.5 ** 2) / (sub_slot_length * 1e-9 / move_freq)
-	# track = [func_helper.linear(np.random.rand() - 0.5, np.random.rand() - 0.5, np.random.rand() - 0.5) for i in range(n_nodes)]
-	# track[0] = func_helper.static()
-	track = [func_helper.backNforth(0.5, 0.5) for i in range(n_nodes)]
+	distance_init = False
+	random_init = True
+	# use the helper to generate track functions
+	func_helper = track_functions(time_granularity)
+	track = []
+	for i in range(n_nodes):
+		if np.random.rand() < 0.5:
+			velocity = func_helper.norm2step(func_helper.resultant2component(2))
+			func = func_helper.linear(velocity[0], velocity[1], velocity[2])
+		else:
+			velocity = func_helper.norm2step(func_helper.resultant2component(2))
+			func = func_helper.spiral(np.pi / 30 * (time_granularity * 1e-9), velocity[0] ** 2 + velocity[1] ** 2, velocity[2])
+		track.append(func)
 
 	# saving parameters
 	save_trace = False
+	save_track = True
 	max_iter = 500
+	n_iter = int((max_iter * num_sub_slot + 2 * delay_max) * move_freq) + 1
 	log_path = '../logs/'
 	config_path = '../configs/'
 	track_path = '../tracks/'
@@ -168,6 +178,10 @@ if __name__ == "__main__":
 						track,
 						scale = scale,
 						time_granularity = time_granularity,
+						distance_init = distance_init, distance = env.delay2distance(),
+				 		random_init = random_init, x = None, y = None, z = None,
+				 		save_trace = save_track, n_iter = n_iter, 
+						file_name = track_path + file_prefix + file_name + file_timestamp + log_suffix,
 						)
 		env.attach_spatial(spatial)
 

@@ -348,9 +348,10 @@ class ENVIRONMENT(object):
 			# ceil rather than floor
 			return -(((distance / 1500) * 1e9) // -self.sub_slot_length).astype(int)
 
-	def delay2distance(self, delay):
+	# for spatial initialization based on the current delay
+	def delay2distance(self):
 		# only the UAN needs to concern this concept
-		return 1500 * (delay.astype(float) * self.sub_slot_length * 1e-9)
+		return 1500 * (self.nodes_delay.astype(float) * self.sub_slot_length * 1e-9)
 
 	def update_delay(self, delay):
 		self.nodes_delay = delay
