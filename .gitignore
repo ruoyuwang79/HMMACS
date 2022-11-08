@@ -1,6 +1,6 @@
 configs/
-!figs/demo.gif
 figs/*
+!figs/demo.gif
 logs/
 tracks/
 src/__pycache__/
