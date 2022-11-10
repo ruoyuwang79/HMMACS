@@ -179,3 +179,10 @@ class track_functions():
 
 	def floating(self):
 		return lambda v, a: ((0, 0, 0), (0, 0, 0))
+
+	# TODO: function sequential, because current & AUV movement
+	# velocity can be accumulated, the simulator can support 
+	# a series of functions of different considerations to a single node
+
+	# TODO: time sequence function, in a period, first partition of time takes f1
+	# second partition of time takes f2, time partition can be configured
