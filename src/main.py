@@ -50,11 +50,11 @@ def main(max_iter, env, agent=None, sim_mode=1):
 # TODO: load saved configurations / parse config files
 if __name__ == "__main__":
 	n_agents = 1
-	n_others = 24
+	n_others = 1
 	n_nodes = n_agents + n_others # number of nodes
 	# nodes_mask = np.random.randint(1, 5, n_nodes)
-	nodes_mask = np.array([2, 4, 2, 4, 1, 4, 3, 3, 2, 2, 2, 3, 4, 2, 1, 2, 4, 1, 3, 4, 1, 3, 2, 4, 2], dtype=int)
-	# nodes_mask = np.array([0, 2, 2, 2, 1, 4, 2, 4, 2, 3], dtype=int)
+	# nodes_mask = np.array([2, 4, 2, 4, 1, 4, 3, 3, 2, 2, 2, 3, 4, 2, 1, 2, 4, 1, 3, 4, 1, 3, 2, 4, 2], dtype=int)
+	nodes_mask = np.array([0, 1], dtype=int)
 	# nodes_mask = np.array([0, 2], dtype=int)
 	# Xuan's case 1 & 2
 	# nodes_mask = np.array([0, 1, 2], dtype=int)
@@ -93,8 +93,8 @@ if __name__ == "__main__":
 	# Xuan's agent-qALOHA coesist
 	# delay = np.random.randint(1, 83, n_nodes)
 	# Ruoyu's mobility test
-	# delay = np.random.randint(1, delay_max, n_nodes)
-	delay = np.array([51, 60, 49, 73, 34, 25, 33, 89, 60, 49, 100, 71, 24, 17, 73, 65, 81, 31, 65, 2, 86, 25, 30, 99, 33], dtype=int)
+	delay = np.random.randint(1, delay_max, n_nodes)
+	# delay = np.array([51, 60, 49, 73, 34, 25, 33, 89, 60, 49, 100, 71, 24, 17, 73, 65, 81, 31, 65, 2, 86, 25, 30, 99, 33], dtype=int)
 	num_sub_slot = 1 if env_mode == 0 else 20
 
 	state_len = 20 # state length (in # of time slots)
@@ -111,7 +111,7 @@ if __name__ == "__main__":
 	epsilon_decay = 0.995
 	
 	# mobility parameters
-	movable = False
+	movable = True
 	# update position every second
 	time_granularity = 30e9
 	# move frequency in sub time slot
@@ -129,14 +129,14 @@ if __name__ == "__main__":
 	for i in range(n_nodes):
 		# dice = np.random.rand()
 		# if dice < 0.33:
-		# 	velocity = func_helper.norm2step(func_helper.resultant2component(2))
+		# 	velocity = func_helper.norm2step(func_helper.resultant2component3d(2))
 		# 	func = func_helper.linear(velocity[0], velocity[1], velocity[2])
 		# elif 0.33 <= dice < 0.66:
-		# 	velocity = func_helper.norm2step(func_helper.resultant2component(2))
+		# 	velocity = func_helper.norm2step(func_helper.resultant2component3d(2))
 		# 	func = func_helper.spiral(np.pi / 30 * (time_granularity * 1e-9), velocity[0] ** 2 + velocity[1] ** 2, velocity[2])
 		# else:
 		# 	threshold = 3 * time_granularity * 1e-9
-		# 	func = func_helper.backNforth(func_helper.resultant2component(0.3), threshold)
+		# 	func = func_helper.backNforth(func_helper.resultant2component3d(0.3), threshold)
 		func = func_helper.moored(2, 4)
 		track.append(func)
 

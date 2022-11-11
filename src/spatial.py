@@ -5,12 +5,12 @@ import numpy as np
 # then the system can have different considerations simultaneously
 class func_matrix():
 	def __init__(self, func_list):
-        self.func_list = func_list
-    
-    def __call__(self, v, a):
-        for func in self.func_list:
-            v, a = func(v, a)
-        return v, a
+		self.func_list = func_list
+	
+	def __call__(self, v, a):
+		for func in self.func_list:
+			v, a = func(v, a)
+		return v, a
 
 # to maximize the efficiency, once initlized, cannot add new nodes
 # just simulate given configuration
@@ -132,13 +132,19 @@ class track_functions():
 		self.time_granularity = time_granularity
 
 	# randomly decompose a resultant velocity
-	# functionality: uniformly pick a random direction
-	def resultant2component(self, resultant):
+	# functionality: uniformly pick a random direction in 3d
+	def resultant2component3d(self, resultant):
 		dvx = np.random.randn()
 		dvy = np.random.randn()
 		dvz = np.random.randn()
 		factor = resultant / np.sqrt(dvx ** 2 + dvy ** 2 + dvz ** 2)
 		return (factor * dvx, factor * dvy, factor * dvz)
+
+	# randomly decompose a resultant velocity
+	# functionality: uniformly pick a random direction in 2d
+	def resultant2component2d(self, resultant):
+		theta = 2 * np.pi * np.random.rand()
+		return (resultant * np.cos(theta), resultant * np.sin(theta), 0)
 
 	# from step velocity (m / step) to normalized (m / s)
 	def step2norm(self, velocity):
@@ -164,8 +170,8 @@ class track_functions():
 		def spiral_func(v, a):
 			epsilon = 1e-7
 			new_theta = np.arctan(v[0] / (v[1] + epsilon)) + angular_velocity + (np.pi if v[1] < 0 else 0)
-			dvx = np.sqrt(velocity) * np.sin(new_theta)
-			dvy = np.sqrt(velocity) * np.cos(new_theta)
+			dvx = np.sqrt(velocity) * np.cos(new_theta)
+			dvy = np.sqrt(velocity) * np.sin(new_theta)
 			return ((dvx, dvy, dvz), (0, 0, 0))
 		return spiral_func
 	
@@ -187,10 +193,16 @@ class track_functions():
 	### used to reproduce, developing ###
 	# UW-ALOHA-QM case A
 	def moored(self, min_v, max_v):
-		return lambda v, z: (self.resultant2component(np.random.uniform(min_v, max_v)), (0, 0, 0))
+		return lambda v, a: (self.resultant2component2d(np.random.uniform(min_v, max_v)), (0, 0, 0))
 
 	def floating(self):
 		return lambda v, a: ((0, 0, 0), (0, 0, 0))
+
+	def AUV_assisted(self, min_v, max_v):
+		return lambda v, a: (self.resultant2component3d(np.random.uniform(min_v, max_v)), (0, 0, 0))
+
+	def AUV_network(self, velocity):
+		return lambda v, a: (self.resultant2component3d(velocity), (0, 0, 0))
 
 
 	# This idea is very tricky for implementation
