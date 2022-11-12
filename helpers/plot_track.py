@@ -17,7 +17,7 @@ def animate_scatters(iteration, data, scatters):
 	return scatters
 
 # downsampling rate
-downsampling_rate = 10
+downsampling_rate = 2
 
 # load and manipulate data
 data = np.loadtxt(file_path + file_name + file_suffix, dtype=float)

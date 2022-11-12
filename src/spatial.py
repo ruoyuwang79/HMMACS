@@ -170,8 +170,8 @@ class track_functions():
 		def spiral_func(v, a):
 			epsilon = 1e-7
 			new_theta = np.arctan(v[0] / (v[1] + epsilon)) + angular_velocity + (np.pi if v[1] < 0 else 0)
-			dvx = np.sqrt(velocity) * np.cos(new_theta)
-			dvy = np.sqrt(velocity) * np.sin(new_theta)
+			dvx = np.sqrt(velocity) * np.sin(new_theta)
+			dvy = np.sqrt(velocity) * np.cos(new_theta)
 			return ((dvx, dvy, dvz), (0, 0, 0))
 		return spiral_func
 	

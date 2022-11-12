@@ -49,12 +49,13 @@ def main(max_iter, env, agent=None, sim_mode=1):
 # set running configurations here
 # TODO: load saved configurations / parse config files
 if __name__ == "__main__":
-	n_agents = 1
-	n_others = 1
+	n_agents = 0
+	n_others = 2
 	n_nodes = n_agents + n_others # number of nodes
 	# nodes_mask = np.random.randint(1, 5, n_nodes)
 	# nodes_mask = np.array([2, 4, 2, 4, 1, 4, 3, 3, 2, 2, 2, 3, 4, 2, 1, 2, 4, 1, 3, 4, 1, 3, 2, 4, 2], dtype=int)
-	nodes_mask = np.array([0, 1], dtype=int)
+	# nodes_mask = nodes_mask[:n_nodes]
+	nodes_mask = np.array([2, 1], dtype=int)
 	# nodes_mask = np.array([0, 2], dtype=int)
 	# Xuan's case 1 & 2
 	# nodes_mask = np.array([0, 1, 2], dtype=int)
@@ -69,10 +70,10 @@ if __name__ == "__main__":
 	sub_slot_length = 1e7
 
 	# in # of time slot
-	# frame_length = 10
-	frame_length = n_nodes
+	frame_length = 10
+	# frame_length = n_nodes
 	tdma_occupancy = 3
-	aloha_prob = 0.5
+	aloha_prob = 0.9
 	window_size = 2
 	max_backoff = 2
 
@@ -93,8 +94,9 @@ if __name__ == "__main__":
 	# Xuan's agent-qALOHA coesist
 	# delay = np.random.randint(1, 83, n_nodes)
 	# Ruoyu's mobility test
-	delay = np.random.randint(1, delay_max, n_nodes)
-	# delay = np.array([51, 60, 49, 73, 34, 25, 33, 89, 60, 49, 100, 71, 24, 17, 73, 65, 81, 31, 65, 2, 86, 25, 30, 99, 33], dtype=int)
+	# delay = np.random.randint(1, delay_max, n_nodes)
+	delay = np.array([51, 60, 49, 73, 34, 25, 33, 89, 60, 49, 100, 71, 24, 17, 73, 65, 81, 31, 65, 2, 86, 25, 30, 99, 33], dtype=int)
+	delay = delay[:n_nodes]
 	num_sub_slot = 1 if env_mode == 0 else 20
 
 	state_len = 20 # state length (in # of time slots)
@@ -111,7 +113,7 @@ if __name__ == "__main__":
 	epsilon_decay = 0.995
 	
 	# mobility parameters
-	movable = True
+	movable = False
 	# update position every second
 	time_granularity = 30e9
 	# move frequency in sub time slot
@@ -123,20 +125,27 @@ if __name__ == "__main__":
 	scale = 2 * 1500 * (delay_max * sub_slot_length * 1e-9)
 	distance_init = True
 	random_init = False
+	# track demo generation
+	# scale = 4
+	# distance_init = False
+	# random_init = True
 	# use the helper to generate track functions
 	func_helper = track_functions(time_granularity)
 	track = []
 	for i in range(n_nodes):
 		# dice = np.random.rand()
 		# if dice < 0.33:
-		# 	velocity = func_helper.norm2step(func_helper.resultant2component3d(2))
+		# if i <= 1:
+		# 	velocity = func_helper.resultant2component3d(.5)
 		# 	func = func_helper.linear(velocity[0], velocity[1], velocity[2])
-		# elif 0.33 <= dice < 0.66:
-		# 	velocity = func_helper.norm2step(func_helper.resultant2component3d(2))
+		# # elif 0.33 <= dice < 0.66:
+		# elif 1 < i <= 3:
+		# 	velocity = func_helper.resultant2component3d(.5)
 		# 	func = func_helper.spiral(np.pi / 30 * (time_granularity * 1e-9), velocity[0] ** 2 + velocity[1] ** 2, velocity[2])
 		# else:
 		# 	threshold = 3 * time_granularity * 1e-9
-		# 	func = func_helper.backNforth(func_helper.resultant2component3d(0.3), threshold)
+		# 	# func = func_helper.backNforth(func_helper.resultant2component3d(0.3), threshold)
+		# 	func = func_helper.AUV_assisted(1, 2)
 		func = func_helper.moored(2, 4)
 		track.append(func)
 
