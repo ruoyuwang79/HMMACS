@@ -233,7 +233,7 @@ class ENVIRONMENT(object):
 		# sink_mode 0: src-agent, sink_mode other: sink-agent
 		self.sink_mode = sink_mode
 
-		self.packet_length = 0 if self.env_mode == 0 else packet_length
+		self.packet_length = 1 if self.env_mode == 0 else packet_length
 		self.guard_length = 0 if self.env_mode == 0 else guard_length
 		self.sending_counter = np.zeros(self.n_nodes, dtype=int)
 		# sub time slot length, unit in nano second (10^-9 s)
