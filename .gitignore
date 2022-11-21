@@ -3,5 +3,7 @@ figs/*
 !figs/demo.gif
 logs/
 tracks/
+temp/
+setups/
 src/__pycache__/
 .DS_Store
