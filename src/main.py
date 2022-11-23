@@ -149,6 +149,8 @@ if __name__ == "__main__":
 	# the first one should be the agent
 	nodes_mask[0] = nodes_mask[0] if args.n_agents == 0 else 0
 
+	args.aloha_prob = 1 / n_nodes
+
 	# mask used for hybrid network
 	# Xuan's case 1
 	# delay = np.array([28, 10, 20], dtype=int)
@@ -162,7 +164,7 @@ if __name__ == "__main__":
 	args.num_sub_slot = 1 if args.env_mode == 0 else 20
 
 	# move frequency in sub time slot
-	move_freq = 1 / (args.time_granularity / args.sub_slot_length)
+	move_freq = args.sub_slot_length / args.time_granularity
 
 	# unit in meter, can be any positive real number
 	# the sptial simulator will randomly generate nodes coordinates as
