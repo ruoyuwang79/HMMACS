@@ -95,6 +95,19 @@ parser.add_argument('--track_path', default='../tracks/', type=str, metavar='DIR
 					help='track (moving positions) path to use (default: ../tracks/)')
 parser.add_argument('--file_prefix', default='', type=str, metavar='NAME',
 					help='file prefix (default: None)')
+# load setups related
+parser.add_argument('--setup_path', default='../setups/', type=str, metavar='DIR',
+					help='setup path (default: ../setups/)')
+parser.add_argument('--mask', default='', type=str, metavar='NAME',
+					help='mask file name (default: None)')
+parser.add_argument('--delay', default='', type=str, metavar='NAME',
+					help='delay file name (default: None)')
+parser.add_argument('--x', default='', type=str, metavar='NAME',
+					help='x position file name (default: None)')
+parser.add_argument('--y', default='', type=str, metavar='NAME',
+					help='y position file name (default: None)')
+parser.add_argument('--z', default='', type=str, metavar='NAME',
+					help='z position file name (default: None)')
 
 args = parser.parse_args()
 
@@ -135,56 +148,53 @@ def main(max_iter, env, agent=None, sim_mode=1):
 # 3     | ERROR            | Filter out all messages   
 
 # set running configurations here
-# TODO: load saved configurations / parse config files
 if __name__ == "__main__":
-	n_nodes = args.n_agents + args.n_others # number of nodes
-	# nodes_mask = np.random.randint(1, 5, n_nodes)
-	# nodes_mask = np.array([2, 4, 2, 4, 1, 4, 3, 3, 2, 2, 2, 3, 4, 2, 1, 2, 4, 1, 3, 4, 1, 3, 2, 4, 2], dtype=int)
-	# nodes_mask = np.array([2, 1], dtype=int)
-	# nodes_mask = np.array([0, 2], dtype=int)
-	# Xuan's case 1 & 2
-	# nodes_mask = np.array([0, 1, 2], dtype=int)
-	# Xuan's agent-qALOHA coesist
-	nodes_mask = 2 * np.ones(n_nodes, dtype=int)
-	# the first one should be the agent
-	nodes_mask[0] = nodes_mask[0] if args.n_agents == 0 else 0
+	# number of nodes
+	n_nodes = args.n_agents + args.n_others
+	# saving parameters
+	file_name = f'iter{args.max_iter}_N{n_nodes}_'
+	file_timestamp = f'{int(time())}'
+	log_suffix = '.txt'
+	config_suffix = '.conf'
 
-	args.aloha_prob = 1 / n_nodes
+	print('trace name:')
+	print(args.file_prefix + file_name + file_timestamp)
 
 	# mask used for hybrid network
-	# Xuan's case 1
-	# delay = np.array([28, 10, 20], dtype=int)
-	# Xuan's case 2
-	# delay = np.array([13, 13, 13], dtype=int)
-	# Xuan's agent-qALOHA coesist
-	# delay = np.random.randint(1, 83, n_nodes)
-	# Ruoyu's mobility test
-	# delay = np.random.randint(1, delay_max, n_nodes)
-	delay = np.array([51, 60, 49, 73, 34, 25, 33, 89, 60, 49, 100, 71, 24, 17, 73, 65, 81, 31, 65, 2, 86, 25, 30, 99, 33], dtype=int)
-	args.num_sub_slot = 1 if args.env_mode == 0 else 20
+	if args.mask != '':
+		# user-given mask
+		nodes_mask = np.loadtxt(args.setup_path + args.mask + log_suffix, dtype=int)
+	else:
+		# user-defined init
+		nodes_mask = 2 * np.ones(n_nodes, dtype=int)
+
+	if args.delay != '':
+		# user-given delay
+		delay = np.loadtxt(args.setup_path + args.delay + log_suffix, dtype=int)
+	else:
+		# random delay inside the given range
+		delay = np.random.randint(1, args.delay_max, n_nodes)
+	
+	# mobility position init, if no given positions, use random/distance init
+	if args.x != '':
+		x = np.loadtxt(args.setup_path + args.x + log_suffix, dtype=float)
+	if args.y != '':
+		y = np.loadtxt(args.setup_path + args.y + log_suffix, dtype=float)
+	if args.z != '':
+		z = np.loadtxt(args.setup_path + args.z + log_suffix, dtype=float)
+	
+	# parameter correctness
+	args.num_sub_slot = 1 if args.env_mode == 0 else args.num_sub_slot
+	args.agent_mac_mode = 0 if args.env_mode == 0 else args.agent_mac_mode
 
 	# move frequency in sub time slot
 	move_freq = args.sub_slot_length / args.time_granularity
+	n_iter = int((args.max_iter * args.num_sub_slot + 2 * args.delay_max) * move_freq) + 1
 
 	# unit in meter, can be any positive real number
 	# the sptial simulator will randomly generate nodes coordinates as
 	# (x, y, z) where x, y, z in [scale * (-0.5, 0.5)]
 	scale = 2 * 1500 * (args.delay_max * args.sub_slot_length * 1e-9)
-	x = np.array([208.914773, -736.46602, 480.537697, -210.472598, 316.414233,
-		 -192.998367, -319.033901, 762.238831, 414.926095, 669.543245,
-		 -1421.686803, -565.33843, -144.956256, 84.897915, 1055.82331,
-		 -956.418692, 904.669339, 120.11628, -379.682744, 1.969628,
-		 -182.404386, -266.67309, -191.007005, -1193.142124, 111.53603], dtype=float)
-	y = np.array([702.136641, -271.478263, 524.515919, -905.226902, -398.260894,
-		 311.177429, -223.862728, 886.16391, -780.735262, 95.587816,
-		 -93.732475, -638.998097, -109.051325, 139.769583, -99.91237,
-		 -5.810079, 549.065821, -107.034741, -642.518984, 14.535218,
-		 449.60557, 240.730111, -216.290798, 882.4457, -408.671267], dtype=float)
-	z = np.array([-220.417229, -408.830472, -184.909633, -579.04278, -37.017475,
-	     80.902644, -280.183599, 644.926731, -38.907414, 246.930785,
-   		 418.623766, -612.024421, 293.462932, 195.657373, 272.542942,
-	     -82.640962, 596.929737, 436.280464, 627.403673, 3.138154,
-		 -1195.275479, 107.515006, 325.514385, 54.09675, 256.071297], dtype=float)
 	
 	# track demo generation
 	# scale = 4
@@ -209,16 +219,6 @@ if __name__ == "__main__":
 		# 	func = func_helper.AUV_assisted(1, 2)
 		func = func_helper.AUV_assisted(2, 4)
 		track.append(func)
-
-	# saving parameters
-	n_iter = int((args.max_iter * args.num_sub_slot + 2 * args.delay_max) * move_freq) + 1
-	file_name = f'iter{args.max_iter}_N{n_nodes}_'
-	file_timestamp = f'{int(time())}'
-	log_suffix = '.txt'
-	config_suffix = '.conf'
-
-	print('trace name:')
-	print(args.file_prefix + file_name + file_timestamp)
 
 	env = ENVIRONMENT(args.n_agents,
 					  args.n_others,
@@ -256,25 +256,27 @@ if __name__ == "__main__":
 						  )
 		env.attach_spatial(spatial)
 
-	agent = DQN(args.state_len,
-				n_nodes,
-				args.num_sub_slot,
-				guard_length = args.guard_length,
-				memory_size = args.memory_size,
-				replace_target_iter = args.replace_target_iter,
-				batch_size = args.batch_size,
-				learning_rate = args.lr,
-				gamma = args.gamma,
-				epsilon = args.epsilon,
-				epsilon_min = args.epsilon_min,
-				epsilon_decay = args.epsilon_decay,
-				alpha = args.alpha,
-				mac_mode = args.agent_mac_mode,
-				sink_mode = args.sink_mode,
-				reward_polarity = args.reward_polarity,
-				penalty_factor = args.penalty_factor,
-				save_trace = args.save_trace,
-				config_name = args.config_path + args.file_prefix + file_name + file_timestamp + config_suffix,
-				)
+	agent = None
+	if args.n_agents > 0:
+		agent = DQN(args.state_len,
+					n_nodes,
+					args.num_sub_slot,
+					guard_length = args.guard_length,
+					memory_size = args.memory_size,
+					replace_target_iter = args.replace_target_iter,
+					batch_size = args.batch_size,
+					learning_rate = args.lr,
+					gamma = args.gamma,
+					epsilon = args.epsilon,
+					epsilon_min = args.epsilon_min,
+					epsilon_decay = args.epsilon_decay,
+					alpha = args.alpha,
+					mac_mode = args.agent_mac_mode,
+					sink_mode = args.sink_mode,
+					reward_polarity = args.reward_polarity,
+					penalty_factor = args.penalty_factor,
+					save_trace = args.save_trace,
+					config_name = args.config_path + args.file_prefix + file_name + file_timestamp + config_suffix,
+					)
 
 	main(args.max_iter, env, agent, args.n_agents)
