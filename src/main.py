@@ -186,6 +186,7 @@ if __name__ == "__main__":
 	# parameter correctness
 	args.num_sub_slot = 1 if args.env_mode == 0 else args.num_sub_slot
 	args.agent_mac_mode = 0 if args.env_mode == 0 else args.agent_mac_mode
+	nodes_mask[0] = 0 if args.n_agents != 0 else nodes_mask[0]
 
 	# move frequency in sub time slot
 	move_freq = args.sub_slot_length / args.time_granularity
