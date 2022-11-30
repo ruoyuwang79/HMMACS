@@ -190,7 +190,7 @@ class DQN:
 		if self.memory_couter > self.memory_size:
 			sample_index = np.random.choice(self.memory_size, size=self.batch_size)
 		else:
-			sample_index = np.random.choice(self.memory_couter, size=self.batch_size)        
+			sample_index = np.random.choice(self.memory_couter, size=self.batch_size)
 		batch_memory = self.memory[sample_index, :]
 
 		state      = batch_memory[:, :self.state_size]

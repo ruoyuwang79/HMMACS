@@ -6,6 +6,7 @@ import argparse
 
 from environment import ENVIRONMENT
 from DQN_brain import DQN
+from aloha_agent import aloha_agent
 from spatial import SPATIAL, track_functions
 
 parser = argparse.ArgumentParser(description='Mobile Hybrid Network MAC Simulator')
@@ -259,6 +260,11 @@ if __name__ == "__main__":
 
 	agent = None
 	if args.n_agents > 0:
+		# agent = aloha_agent(aloha_prob = 1,
+		# 					mac_mode = args.agent_mac_mode,
+		# 					num_sub_slot = args.num_sub_slot,
+		# 					guard_length = args.guard_length,
+		# 				   )
 		agent = DQN(args.state_len,
 					n_nodes,
 					args.num_sub_slot,
