@@ -21,4 +21,5 @@ for file_name in log_names:
     print(file_name)
     Rewards_logs = np.loadtxt(log_path + file_name + log_suffix, dtype=int)
     Throughput = Rewards_logs.mean(0)
+    print(f'the agent contribution is {Throughput[0]:.4f}')
     print(f'the system throughput is {Throughput.sum():.4f}')
