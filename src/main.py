@@ -174,7 +174,7 @@ if __name__ == "__main__":
 		delay = np.loadtxt(args.setup_path + args.delay + log_suffix, dtype=int)
 	else:
 		# random delay inside the given range
-		delay = np.random.randint(1, args.delay_max, n_nodes)
+		delay = np.ones(n_nodes, dtype=int) if args.env_mode == 0 else np.random.randint(1, args.delay_max, n_nodes)
 	
 	# mobility position init, if no given positions, use random/distance init
 	if args.x != '':
@@ -185,6 +185,7 @@ if __name__ == "__main__":
 		z = np.loadtxt(args.setup_path + args.z + log_suffix, dtype=float)
 	
 	# parameter correctness
+	args.aloha_prob = 1 / n_nodes if args.env_mode == 0 else args.aloha_prob
 	args.num_sub_slot = 1 if args.env_mode == 0 else args.num_sub_slot
 	args.agent_mac_mode = 0 if args.env_mode == 0 else args.agent_mac_mode
 	nodes_mask[0] = 0 if args.n_agents != 0 else nodes_mask[0]

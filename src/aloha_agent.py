@@ -1,5 +1,7 @@
 import numpy as np
 
+# Used for simulate an ALOHA node
+# this allows the user apply different q in a network
 class aloha_agent:
 	def __init__(self,
 				 aloha_prob=0.5,

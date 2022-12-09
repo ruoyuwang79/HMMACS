@@ -272,13 +272,15 @@ class ENVIRONMENT(object):
 		# Ruoyu: Track the system throughput is the environment responsibility
 		# it has large overhead of memory, but we need that data
 		self.save_trace = save_trace
+		self.trace_counter = 0
 		if self.save_trace:
-			self.trace_counter = 0
 			self.n_iter = n_iter
 			self.log_name = log_name
 			self.config_name = config_name
 			# the addtional rows are for the drain reward
 			self.transmission_logs = np.zeros((self.n_iter + 1, self.n_nodes), dtype=int)
+		else:
+			self.transmission_logs = np.zeros(self.n_nodes, dtype=int)
 
 	# attach the mobile simulator
 	def attach_spatial(self, spatial):
@@ -297,10 +299,9 @@ class ENVIRONMENT(object):
 		self.window = np.random.randint(0, self.window_size * 2**self.eb_collision_count, dtype=int)
 		self.channel = CHANNEL(self.n_nodes, self.nodes_delay, self.num_sub_slot)
 		self.previous_action = np.zeros(self.num_sub_slot, dtype=int)
+		self.trace_counter = 0
 		if self.movable:
-			self.move_counter = 0		
-		if self.save_trace:
-			self.trace_counter = 0
+			self.move_counter = 0
 
 	# conventional nodes decision making
 	# granularity is time slot, call it at the beginning of a time slot
@@ -396,9 +397,11 @@ class ENVIRONMENT(object):
 		self.eb_collision_count[(Observations < 0).sum(0) > 0] += 1
 		self.update_counters()
 
+		self.trace_counter += 1
 		if self.save_trace:
 			self.transmission_logs[self.trace_counter, :] = Success_trace.sum(0)
-			self.trace_counter += 1
+		else:
+			self.transmission_logs += Success_trace.sum(0)
 		
 		return Observations[:, self.nodes_mask == 0]
 
@@ -422,9 +425,11 @@ class ENVIRONMENT(object):
 			self.sending_counter[self.sending_counter < 0] = 0
 			Observations[i, :], self.previous_action, Success_trace[i, :] = self.channel.cycle(sub_slot_action, broadcast[i], self.packet_length)
 
+		self.trace_counter += 1
 		if self.save_trace:
 			self.transmission_logs[self.trace_counter, :] = Success_trace.sum(0)
-			self.trace_counter += 1
+		else:
+			self.transmission_logs += Success_trace.sum(0)
 		
 		return Observations
 
@@ -455,9 +460,9 @@ class ENVIRONMENT(object):
 		if self.movable and self.move_freq != 0:
 			self.spatial.finalize()
 
+		self.trace_counter += 1
 		if self.save_trace:
 			self.transmission_logs[self.trace_counter, :] = Success_trace.sum(0)
-			self.trace_counter += 1
 			np.savetxt(self.log_name, self.transmission_logs[:self.trace_counter, :], fmt='%d')
 			with open(self.config_name, 'a') as f:
 				config_list = ['n_agents', 'n_others', 'nodes_mask', 'packet_length', 'guard_length', 'frame_length', 'tdma_occupancy', 
@@ -467,4 +472,7 @@ class ENVIRONMENT(object):
 				f.write('\n'.join([f'{config_key}: {self.__dict__[config_key]}' for config_key in config_list if config_key in self.__dict__]))
 				f.write('\n')
 				f.close()
+		else:
+			self.transmission_logs += Success_trace.sum(0)
+			print(f'{self.n_agents + self.n_others}-nodes system throughput: {(self.transmission_logs / self.trace_counter).sum()}')
 		return self.channel.get_trace()
