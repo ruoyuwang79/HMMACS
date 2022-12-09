@@ -110,7 +110,7 @@ Note that the ```run.sh``` exists in the root directory of the repository, the d
 
 - Demo
 
-  ![demo](https://github.com/AliceEva/RDLMA/blob/main/figs/demo.gif)
+  ![demo](https://github.com/ruoyuwang79/HMMACS/blob/main/figs/demo.gif)
 
 ## Note
 
