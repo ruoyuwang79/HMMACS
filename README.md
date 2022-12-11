@@ -3,6 +3,17 @@
 
 ## Description
 
+- Architecture
+
+![arch](https://github.com/ruoyuwang79/HMMACS/blob/main/figs/architecture.png)
+
+- The simulator uses three-level of abstractions to encapsulate the low-level trivial things
+- The ```main.py``` is the simulator itself, which already integrates all necessary components together
+- The ```environment.py``` is the communication simulator, which simulates the communication network, especially underwater scenarios
+- The ```spatial.py``` is the spatial simulator, which simulates the spatial mobility
+- The ```DQN_brain.py``` and ```aloha_agent.py``` are two templates for user-defined MAC protocols, one for AI-assisted agents, the other for common nodes
+- The ```helpers/``` are many helper functions that can help users to extract throughput, plot charts, or analyze useful information from trace or track files
+
 
 
 ## File Tree
@@ -30,7 +41,7 @@
 
 ### Prerequisite
 
-The versions are based on the development environment, lower version maybe workable, but no guarantee.
+The versions are based on the development environment; lower version maybe workable, but no guarantee.
 
 - Python ```>=3.8.10```
 
@@ -44,19 +55,34 @@ Or you can use the docker image we used during development:
 docker pull ruoyuwang79/hmmacs_20.04-tf2-py38:20221211
 ```
 
+### Optional
 
+Recommend making some new directories at the root; you can use the command:
+
+```
+mkdir configs figs logs setups temp tracks
+```
+
+- The directory ```configs/``` is used to store simulation configurations, when you enable the flag ```--save_trace```, the simulator will store the simulation configurations as ```.txt``` file (you can specify the file prefix name, and the suffix will be the time stamp to avoid name conflict overwriting).
+- The directory ```logs/``` is used to store simulation throughput logs, when you enable the flag ```--save_trace```, the simulator will store the simulation throughput results as ```.txt``` file, the number of rows will be the same as the number of time slots simulated (you can specify the file prefix name, and the suffix will be the time stamp to avoid name conflict overwriting). The simulator will print out the average throughput if there is no such flag.
+- The directory ```figs/``` is used to store plotted figures, and the plotting programs are in the directory ```helpers/```.
+- The directory ```setups/``` is used to store pre-defined setups, when you want to repeat/reproduce some simulation, you can copy the corresponding mask/delay values or x/y/z coordinates and store them as ```.txt``` inside this directory. Then let the simulator read in such setups.
+- The directory ```tracks/``` is used to store mobility tracks, when you enable the flat ```--save_track```, the simulator will store the past spatial simulation track as ```.txt``` files into this directory.
+- The directory ```temp/``` is used to store ```stdout``` temporarily when you are using the ```run.sh``` to run batches of experiments.
 
 ### Usage
 
 ```
 usage: main.py [-h] 
-[--n_agents N] [--n_others N] [--packet_length N] [--guard_length N] [--sub_slot_length T] [--delay_max N] 
-[--num_sub_slot N] [--frame_length N] [--tdma_occupancy N] [--aloha_prob q] [--window_size N] [--max_backoff N] 
-[--env_mode M] [--env_mac_mode M] [--agent_mac_mode M] [--sink_mode M] [--state_len M] [--memory_size E] 
-[--replace_target_iter F] [--train_interval F] [--batch_size B] [--gamma G] [--alpha A] [--lr LR] [--reward_polarity] 
-[--penalty_factor P] [--epsilon e] [--epsilon_min MIN] [--epsilon_decay D] [--movable] [--time_granularity T] 
-[--distance_init] [--random_init] [--save_trace] [--save_track] [--max_iter N] [--log_path DIR] [--config_path DIR] 
-[--track_path DIR] [--file_prefix NAME] [--setup_path DIR] [--mask NAME] [--delay NAME] [--x NAME] [--y NAME] [--z NAME]
+[--n_agents N] [--n_others N] [--packet_length N] [--guard_length N] [--sub_slot_length T] 
+[--delay_max N] [--num_sub_slot N] [--frame_length N] [--tdma_occupancy N] [--aloha_prob q] 
+[--window_size N] [--max_backoff N] [--env_mode M] [--env_mac_mode M] [--agent_mac_mode M] 
+[--sink_mode M] [--state_len M] [--memory_size E] [--replace_target_iter F] 
+[--train_interval F] [--batch_size B] [--gamma G] [--alpha A] [--lr LR] [--reward_polarity] 
+[--penalty_factor P] [--epsilon e] [--epsilon_min MIN] [--epsilon_decay D] [--movable] 
+[--time_granularity T] [--distance_init] [--random_init] [--save_trace] [--save_track] 
+[--max_iter N] [--log_path DIR] [--config_path DIR] [--track_path DIR] [--file_prefix NAME] 
+[--setup_path DIR] [--mask NAME] [--delay NAME] [--x NAME] [--y NAME] [--z NAME]
 ```
 
 The description of those options are:
@@ -123,20 +149,17 @@ Note that the ```run.sh``` exists in the root directory of the repository, the d
 
 
 
-## Update Logs
+## Updating Logs
 
-### Mobility Update
+### Mobility Update (Oct. 2022)
 
 - Allow mobility of sources nodes
 
 - User can use the self-designed track function to control nodes
 
-- The track function is velocity driven, input current velocity, output should be next step velocity
+- The track function is velocity driven, input current velocity and acceleration, output should be the same format as input
 
 - Demo
 
-  ![demo](https://github.com/ruoyuwang79/HMMACS/blob/main/figs/demo.gif)
 
-## Note
-
-- To use with the option ```save_trace=True``` or run ```plot_reward.py```,  you need to specify the proper storage paths. Recommend use ```configs/```, ```logs/```, and ```figs/```.
+![demo](https://github.com/ruoyuwang79/HMMACS/blob/main/figs/demo.gif)

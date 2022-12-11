@@ -1,6 +1,7 @@
 configs/
 figs/*
 !figs/demo.gif
+!figs/architecture.png
 logs/
 tracks/
 temp/
