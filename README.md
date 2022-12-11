@@ -1,6 +1,31 @@
 # Hybrid Mobile MAC Simulator (HMMACS)
 **A light-weighted, user-friendly, AI-integratable, and mobility-compatible MAC simulator.**
 
+## Description
+
+
+
+## File Tree
+
+```bash
+.
+├── README.md
+├── helpers
+│   ├── analyze.py
+│   ├── get_delay.py
+│   ├── plot_reward.py
+│   └── plot_track.py
+├── run.sh
+└── src
+    ├── DQN_brain.py
+    ├── aloha_agent.py
+    ├── environment.py
+    ├── main.py
+    └── spatial.py
+```
+
+
+
 ## How to Use
 
 ### Prerequisite
@@ -16,7 +41,7 @@ The versions are based on the development environment, lower version maybe worka
 Or you can use the docker image we used during development:
 
 ```
-docker run --gpus all -it --rm nvcr.io/nvidia/tensorflow:22.11-tf2-py3
+docker pull ruoyuwang79/hmmacs_20.04-tf2-py38:20221211
 ```
 
 
