@@ -90,13 +90,16 @@ class DELAY_QUEUE(object):
 
 # collection of all-nodes full-duplex channels
 class CHANNEL(object):
-	def __init__(self, n_nodes: int, delay: np.array):
+	def __init__(self, n_nodes: int, delay: np.array, SNR: float, PER_threshold: float):
 		super(CHANNEL, self).__init__()
 		# number of nodes of the system
 		self.n_nodes = n_nodes
 		# delay is an integer vector with n_nodes length
 		# delay * sub time slot length * propagation speed = distance
 		self.delay = delay
+		# default physical channel PER model used in NS-3
+		self.SNR = SNR
+		self.PER_threshold = PER_threshold
 		# the memory used to track transmitting packets
 		self.sink_receiving_counter = np.zeros(self.n_nodes, dtype=int)
 		self.sink_throughput_trace = np.zeros(self.n_nodes, dtype=int)
@@ -148,7 +151,8 @@ class CHANNEL(object):
 			if -1 in uplink_channel_output:
 				# when a whole packet finished, the packet size is the effective payload
 				# currently, the trace only the cumulative result, it can be extended to step trace
-				self.sink_throughput_trace[uplink_channel_output == -1] += self.sink_receiving_counter[uplink_channel_output == -1]
+				if self.SNR >= self.PER_threshold:
+					self.sink_throughput_trace[uplink_channel_output == -1] += self.sink_receiving_counter[uplink_channel_output == -1]
 				self.sink_receiving_counter[uplink_channel_output == -1] = 0
 				success_trace[uplink_channel_output == -1] = 1
 				# only a success whole transmission lead to success observation
@@ -162,6 +166,14 @@ class CHANNEL(object):
 			# collision
 			self.sink_receiving_counter[uplink_channel_throughput == 1] = 0
 			obs = 0
+
+		# default physical channel PER model used in NS-3
+		# because the simulator is time-accurate simulator
+		# even packet error happens, the simulation of the packet should be calculated
+		# only impacts on the receiver side link-layer
+		if self.SNR < self.PER_threshold:
+			obs = 1
+			success_trace *= 0
 		self.previous_obs = obs
 		return Observations, success_trace
 
@@ -184,6 +196,16 @@ class CHANNEL(object):
 			success_trace[Observations == -1] = 1
 		elif abs_obs.sum() > 1:
 			self.sink_receiving_counter[abs_obs == 1] = 0
+
+		# default physical channel PER model used in NS-3
+		# because the simulator is time-accurate simulator
+		# even packet error happens, the simulation of the packet should be calculated
+		# only impacts on the receiver side link-layer
+		if self.SNR < self.PER_threshold:
+			Observations = np.zeros(self.n_nodes, dtype=int)
+			src_instruction = np.zeros(self.n_nodes, dtype=int)
+			success_trace = np.zeros(self.n_nodes, dtype=int)
+		
 		return Observations, src_instruction, success_trace
 
 # Normal nodes decision making simulation
@@ -203,6 +225,9 @@ class ENVIRONMENT(object):
 				 env_mode: int = 0,
 				 mac_mode: int = 0,
 				 sink_mode: int = 0,
+				 physical_model: int = 0,
+				 SNR: float = 20,
+				 PER_threshold: float = 8.3,
 				 nodes_delay: np.array = None,
 				 num_sub_slot: int = 1,
 				 movable: bool = False,
@@ -233,6 +258,10 @@ class ENVIRONMENT(object):
 		# sink_mode 0: src-agent, sink_mode other: sink-agent
 		self.sink_mode = sink_mode
 
+		self.physical_model = physical_model
+		self.SNR = SNR
+		self.PER_threshold = PER_threshold
+
 		self.packet_length = 1 if self.env_mode == 0 else packet_length
 		self.guard_length = 0 if self.env_mode == 0 else guard_length
 		self.sending_counter = np.zeros(self.n_nodes, dtype=int)
@@ -259,7 +288,7 @@ class ENVIRONMENT(object):
 		self.nodes_delay = np.ones(self.n_nodes, dtype=int) if self.env_mode == 0 else nodes_delay
 		assert self.nodes_delay.size == self.n_nodes
 		self.num_sub_slot = 1 if self.env_mode == 0 else num_sub_slot
-		self.channel = CHANNEL(self.n_nodes, self.nodes_delay)
+		self.channel = CHANNEL(self.n_nodes, self.nodes_delay, self.SNR if self.physical_model else self.PER_threshold + 1, self.PER_threshold)
 		self.n_padding = 2 * self.nodes_delay.max()
 
 		self.previous_action = np.zeros(self.num_sub_slot, dtype=int)
@@ -472,6 +501,7 @@ class ENVIRONMENT(object):
 				f.write('\n')
 				f.close()
 		else:
-			self.transmission_logs += Success_trace.sum(0)
-			print(f'{self.n_agents + self.n_others}-nodes system throughput: {(self.transmission_logs / self.trace_counter + 1).sum()}')
+			if self.physical_model == 0 or self.SNR >= self.PER_threshold:
+				self.transmission_logs += Success_trace.sum(0)
+			print(f'{self.n_agents + self.n_others}-nodes system throughput: {(self.transmission_logs / (self.trace_counter + 1)).sum()}')
 		return self.channel.get_trace()

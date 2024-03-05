@@ -1,11 +1,10 @@
 import os
 import numpy as np
 from tqdm import tqdm
-from time import time
+from time import time_ns
 import argparse
 
 from environment import ENVIRONMENT
-from DQN_brain import DQN
 from aloha_agent import aloha_agent
 from spatial import SPATIAL, track_functions
 
@@ -45,6 +44,12 @@ parser.add_argument('--agent_mac_mode', default=1, type=int, metavar='M',
 					help='agent MAC mode, 0 sync, others async (default 1)')
 parser.add_argument('--sink_mode', default=0, type=int, metavar='M', 
 					help='agent node type, 0 source node, 1 sink node (default 0)')
+parser.add_argument('--physical_model', default=0, type=int, metavar='PHY',
+					help='physical channel model, 0 perfect PHY, 1 NS-3 default PHY (default 0)')
+parser.add_argument('--SNR', default=20, type=float, metavar='SNR',
+					help='SNR level used in simulation (default 20)')
+parser.add_argument('--PER_threshold', default=8.3, type=float, metavar='PER',
+					help='PER model SNR threshold, once the SNR < PER_threshold, PER=1 (default 8.3)')
 # DQN configurations
 parser.add_argument('--state_len', default=20, type=int, metavar='M', 
 					help='length of super-state (default 20 time slots)')
@@ -154,7 +159,7 @@ if __name__ == "__main__":
 	n_nodes = args.n_agents + args.n_others
 	# saving parameters
 	file_name = f'iter{args.max_iter}_N{n_nodes}_'
-	file_timestamp = f'{int(time())}'
+	file_timestamp = f'{time_ns()}'
 	log_suffix = '.txt'
 	config_suffix = '.conf'
 
@@ -237,6 +242,9 @@ if __name__ == "__main__":
 					  env_mode = args.env_mode,
 					  mac_mode = args.env_mac_mode,
 					  sink_mode = args.sink_mode,
+					  physical_model = args.physical_model,
+					  SNR = args.SNR,
+					  PER_threshold = args.PER_threshold,
 					  nodes_delay = delay[:n_nodes],
 					  num_sub_slot = args.num_sub_slot,
 					  movable = args.movable,
@@ -261,6 +269,7 @@ if __name__ == "__main__":
 
 	agent = None
 	if args.n_agents > 0:
+		from DQN_brain import DQN
 		# agent = aloha_agent(aloha_prob = 1,
 		# 					mac_mode = args.agent_mac_mode,
 		# 					num_sub_slot = args.num_sub_slot,
