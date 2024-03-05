@@ -161,6 +161,8 @@ Note that the ```run.sh``` exists in the root directory of the repository, the d
 
 - Demo
 
+![demo](https://github.com/ruoyuwang79/HMMACS/blob/main/figs/demo.gif)
+
 ### Physical Model Update (Mar. 2024)
 
 - Add physical layer Packet Error Rate (PER) model
@@ -168,5 +170,3 @@ Note that the ```run.sh``` exists in the root directory of the repository, the d
 - The PER model is the same as [NS-3](https://www.nsnam.org/docs/release/3.40/models/html/uan.html#uan-phy-model-overview) default PER and SINR model 
 
 - Fix the bug that using ```./run.sh``` will generate trace files with same timestamps
-
-![demo](https://github.com/ruoyuwang79/HMMACS/blob/main/figs/demo.gif)
